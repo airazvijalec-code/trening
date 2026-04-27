@@ -1,0 +1,2649 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trening">
+<title>Trening</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23ff5722'/%3E%3Ctext x='32' y='44' font-size='38' font-family='system-ui' font-weight='800' text-anchor='middle' fill='white'%3ET%3C/text%3E%3C/svg%3E">
+<!-- styles.css inlined by build -->
+<style>
+/* =====================================================================
+ * Trening — styles
+ * Mobile-first, dark theme. Section headings comment each block.
+ * ===================================================================== */
+
+:root{
+  --bg:#0b0d10;
+  --panel:#15181d;
+  --panel2:#1c2026;
+  --panel3:#242a32;
+  --line:#272c33;
+  --txt:#e9ecef;
+  --muted:#8b949e;
+  --dim:#5c6470;
+  --accent:#ff5722;
+  --accent-dim:#7a2c10;
+  --good:#22c55e;
+  --warn:#eab308;
+  --bad:#ef4444;
+  --radius:14px;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,system-ui,Segoe UI,Roboto,sans-serif;
+  overscroll-behavior-y:contain;-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:var(--txt);background:var(--panel2);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+textarea{resize:vertical;min-height:60px;width:100%}
+
+/* ----- Header ----- */
+header.app{position:sticky;top:0;background:rgba(11,13,16,.85);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:14px 16px;z-index:10;
+  display:flex;align-items:center;gap:10px}
+.hd-stack{flex:1;min-width:0}
+header.app h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.app .sub{color:var(--muted);font-size:12px;font-weight:500;margin-top:2px}
+.icon-btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px}
+.icon-btn:active{transform:scale(.96)}
+
+/* sync indicator */
+.sync-badge{width:8px;height:8px;border-radius:50%;background:var(--dim);
+  flex-shrink:0;transition:background .2s}
+.sync-badge.ok{background:var(--good)}
+.sync-badge.syncing{background:var(--warn);animation:pulse 1s infinite}
+.sync-badge.err{background:var(--bad)}
+.sync-badge.off{background:var(--dim)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ----- Draft banner ----- */
+.draft-banner{background:var(--accent-dim);border-bottom:1px solid var(--accent);
+  color:#fff;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:10px}
+.draft-banner button{background:var(--accent);border:0;border-radius:8px;
+  padding:6px 12px;font-weight:700;font-size:12px;color:#fff;cursor:pointer;flex-shrink:0}
+.draft-banner .grow{flex:1}
+
+/* ----- Layout ----- */
+main{max-width:560px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.muted{color:var(--muted)}
+.dim{color:var(--dim)}
+.center{text-align:center}
+.hidden{display:none!important}
+
+/* ----- Buttons ----- */
+.btn{appearance:none;border:0;background:var(--accent);color:#fff;border-radius:12px;
+  padding:14px 18px;font-weight:700;font-size:15px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.btn.danger{background:#3a1a1a;color:#ff8888;border:1px solid #5a2a2a}
+.btn.success{background:var(--good)}
+.btn.sm{padding:8px 12px;font-size:13px;width:auto}
+
+/* ----- Template grid ----- */
+.tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tpl-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+  padding:14px;cursor:pointer;text-align:left}
+.tpl-card:active{border-color:var(--accent)}
+.tpl-card h3{margin:0 0 4px;font-size:14px}
+.tpl-card .ex-count{color:var(--muted);font-size:12px}
+
+/* ----- Session list ----- */
+.sess-row{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--line);cursor:pointer}
+.sess-row:last-child{border-bottom:0}
+.sess-row .when{font-weight:700;width:46px;text-align:center}
+.sess-row .when .d{font-size:18px}
+.sess-row .when .m{font-size:10px;color:var(--muted);text-transform:uppercase}
+.sess-row .body{flex:1;min-width:0}
+.sess-row .ttl{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-row .meta{color:var(--muted);font-size:12px;margin-top:2px}
+
+/* ----- Badges ----- */
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;
+  font-weight:700;letter-spacing:.02em}
+.badge.rpe{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.badge.knee0{background:#1a2e1a;color:#7ecf7e}
+.badge.knee1{background:#3a3a1a;color:#e6d24a}
+.badge.knee2{background:#3a2a14;color:#f0a050}
+.badge.knee3{background:#3a1a1a;color:#ff7070}
+.badge.pr{background:linear-gradient(135deg,#ff5722,#ffab91);color:#fff;
+  box-shadow:0 0 8px rgba(255,87,34,.35)}
+
+/* ----- Exercise editor ----- */
+.ex-block{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+  padding:12px;margin-bottom:10px}
+.ex-block.has-pr{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.ex-block .ex-name{display:flex;align-items:center;gap:8px;margin-bottom:8px;position:relative}
+.ex-block .ex-name input{flex:1;background:transparent;border:0;padding:4px 0;
+  font-weight:700;font-size:15px}
+.ex-block .ex-name input:focus{border-bottom:1px solid var(--accent)}
+.ex-block .ex-hint{color:var(--muted);font-size:11px;margin-top:-4px;margin-bottom:6px}
+
+/* set rows */
+.set-row{display:grid;grid-template-columns:30px 1fr 1fr 36px 36px;gap:6px;
+  align-items:center;margin-bottom:6px}
+.set-row.head{margin-bottom:4px}
+.set-row.head div{color:var(--muted);font-size:10px;text-align:center;
+  text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.set-row .idx{color:var(--muted);font-size:12px;text-align:center;font-weight:700}
+.set-row input{padding:8px 6px;text-align:center;font-weight:600;font-size:15px}
+.set-row .x{background:transparent;border:0;color:var(--dim);cursor:pointer;
+  font-size:18px;padding:0;text-align:center}
+.set-row .done-btn{background:var(--panel3);border:1px solid var(--line);
+  border-radius:8px;color:var(--muted);cursor:pointer;font-size:14px;font-weight:700;
+  padding:0;height:34px}
+.set-row .done-btn[data-done="true"]{background:var(--good);border-color:var(--good);color:#fff}
+.set-row.set-done input{opacity:.6}
+
+.set-add{display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap}
+.opomba{margin-top:8px}
+.opomba textarea{font-size:13px;min-height:42px}
+
+/* autocomplete dropdown */
+.ac-list{position:absolute;top:100%;left:0;right:30px;background:var(--panel3);
+  border:1px solid var(--line);border-radius:10px;z-index:5;max-height:200px;
+  overflow-y:auto;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.ac-list button{display:block;width:100%;text-align:left;background:transparent;
+  border:0;padding:10px 12px;color:var(--txt);font-size:14px;cursor:pointer;
+  border-bottom:1px solid var(--line)}
+.ac-list button:last-child{border-bottom:0}
+.ac-list button:hover,.ac-list button:focus{background:var(--panel2)}
+
+/* ----- Knee row ----- */
+.knee-row{display:flex;gap:6px}
+.knee-btn{flex:1;background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;padding:10px 0;font-weight:700;cursor:pointer}
+.knee-btn[data-active="true"][data-v="0"]{background:#1a2e1a;border-color:#3a6e3a;color:#7ecf7e}
+.knee-btn[data-active="true"][data-v="1"]{background:#3a3a1a;border-color:#7e6e1a;color:#e6d24a}
+.knee-btn[data-active="true"][data-v="2"]{background:#3a2a14;border-color:#7e5614;color:#f0a050}
+.knee-btn[data-active="true"][data-v="3"]{background:#3a1a1a;border-color:#7e1a1a;color:#ff7070}
+
+/* ----- RPE ----- */
+.rpe-row{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rpe-btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:8px 0;text-align:center;font-weight:700;font-size:13px;cursor:pointer}
+.rpe-btn[data-active="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ----- Tab nav ----- */
+nav.tab{position:fixed;left:0;right:0;bottom:0;background:rgba(11,13,16,.95);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);display:flex;
+  padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:20}
+nav.tab a{flex:1;text-align:center;color:var(--muted);text-decoration:none;
+  font-size:11px;padding:6px 4px;font-weight:600}
+nav.tab a .ico{display:block;font-size:20px;margin-bottom:2px}
+nav.tab a[data-active="true"]{color:var(--accent)}
+
+/* ----- Toasts / feedback ----- */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;padding:10px 16px;border-radius:10px;
+  font-weight:700;font-size:13px;z-index:30;animation:fade .25s;
+  max-width:90%;text-align:center}
+.toast.warn{background:var(--warn);color:#000}
+.toast.err{background:var(--bad)}
+@keyframes fade{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* PR celebration */
+.pr-flash{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:60;
+  display:flex;align-items:center;justify-content:center;animation:fadeBg .2s;
+  flex-direction:column;gap:14px}
+.pr-flash .pr-medal{font-size:88px;animation:scaleIn .35s cubic-bezier(.2,1.4,.4,1)}
+.pr-flash .pr-text{color:#fff;font-size:22px;font-weight:800;text-align:center;
+  padding:0 30px;text-shadow:0 2px 12px rgba(255,87,34,.5)}
+.pr-flash .pr-num{color:var(--accent);font-size:36px;font-weight:900;letter-spacing:-.02em}
+@keyframes fadeBg{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{0%{transform:scale(0) rotate(-30deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+
+/* ----- Form fields ----- */
+.field{display:block;margin-bottom:10px}
+.field label{display:block;color:var(--muted);font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ----- Stats ----- */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  padding:10px;text-align:center}
+.stat .v{font-size:18px;font-weight:800}
+.stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.04em;font-weight:700;margin-top:2px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+
+/* ----- Charts ----- */
+.chart-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+  padding:12px;margin-bottom:10px}
+.chart-wrap svg{display:block;width:100%;height:auto}
+.chart-tabs{display:flex;gap:6px;margin-bottom:10px}
+.chart-tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);
+  border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}
+.chart-tabs button[data-active="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ----- Sheet (modal) ----- */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;
+  display:flex;align-items:flex-end}
+.sheet .panel{background:var(--panel);width:100%;max-width:560px;margin:0 auto;
+  border-radius:16px 16px 0 0;padding:18px 14px calc(18px + env(safe-area-inset-bottom));
+  animation:slup .2s;max-height:85vh;overflow-y:auto}
+@keyframes slup{from{transform:translateY(40px)}to{transform:translateY(0)}}
+.sheet .panel button.menu-item{width:100%;text-align:left;padding:14px 12px;
+  background:transparent;border:0;color:var(--txt);font-size:15px;
+  border-bottom:1px solid var(--line);cursor:pointer}
+.sheet .panel button.menu-item:last-child{border-bottom:0}
+
+/* ----- Rest timer ----- */
+.timer-bar{position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom));
+  background:var(--accent);color:#fff;padding:12px 16px;display:flex;align-items:center;
+  gap:14px;z-index:25;font-weight:800;animation:slup .2s}
+.timer-bar .t-time{font-size:24px;font-variant-numeric:tabular-nums;min-width:64px}
+.timer-bar .t-label{flex:1;font-size:13px;font-weight:600;opacity:.9}
+.timer-bar button{background:rgba(0,0,0,.25);border:0;color:#fff;border-radius:8px;
+  padding:8px 12px;font-weight:700;cursor:pointer}
+.timer-bar.warn{background:var(--warn);color:#000}
+.timer-bar.done{background:var(--good);animation:flash .5s 3}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* search/filter row */
+.filter-row{display:flex;gap:8px;margin-bottom:12px}
+.filter-row input{flex:1}
+.chip{display:inline-block;padding:6px 10px;border-radius:16px;background:var(--panel2);
+  border:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;color:var(--muted)}
+.chip[data-active="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ----- Settings ----- */
+.set-section{margin-bottom:18px}
+.set-section h3{margin:0 0 8px;font-size:13px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.set-help{color:var(--muted);font-size:12px;line-height:1.5;margin:6px 0}
+.set-help a{color:var(--accent)}
+.kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--muted);font-size:13px}
+.kv .v{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="hd-stack">
+    <h1 id="title">Trening</h1>
+    <div class="sub" id="subtitle"></div>
+  </div>
+  <div id="syncBadge" class="sync-badge" title="Status sinhronizacije"></div>
+  <button class="icon-btn" id="menuBtn" title="Nastavitve" aria-label="Nastavitve">⋯</button>
+</header>
+
+<div id="draftBanner" class="draft-banner hidden"></div>
+
+<main id="app" role="main"></main>
+
+<nav class="tab" aria-label="Glavna navigacija">
+  <a href="#" data-go="home"><span class="ico">⌂</span>Domov</a>
+  <a href="#" data-go="new"><span class="ico">＋</span>Trening</a>
+  <a href="#" data-go="history"><span class="ico">≡</span>Zgodovina</a>
+  <a href="#" data-go="progress"><span class="ico">⇡</span>Progres</a>
+</nav>
+
+<input type="file" id="fileIn" accept="application/json" hidden>
+
+<!-- main.js inlined by build -->
+<script>
+(()=>{
+const __M = {};
+/* state/normalize.js */
+{
+/* =====================================================================
+ * normalize.js — exercise name canonicalization
+ *
+ * Two distinct concerns:
+ *   - display name: what the user typed, preserved for UI ("Leg pres notraj")
+ *   - canonical name: lowercased, whitespace-collapsed, accent-folded —
+ *     used for grouping in progression charts and autocomplete matching.
+ *
+ * Why fold diacritics? Because users type "Počep" sometimes and "Pocep"
+ * other times when in a hurry. Same exercise.
+ * ===================================================================== */
+
+/**
+ * Convert a name to a canonical key used for matching.
+ *   "Leg pres  Široko" → "leg pres siroko"
+ *   "Počep " → "pocep"
+ */
+function canonical(name) {
+  if (!name) return '';
+  return String(name)
+    .normalize('NFD')                        // decompose accents
+    .replace(/[̀-ͯ]/g, '')         // strip combining marks
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')             // collapse non-alnum to single space
+    .trim();
+}
+
+/**
+ * Levenshtein distance — used to suggest "did you mean X?" when typing.
+ * Capped at maxDist for early termination on long strings.
+ */
+function lev(a, b, maxDist = 4) {
+  if (a === b) return 0;
+  if (!a) return b.length;
+  if (!b) return a.length;
+  if (Math.abs(a.length - b.length) > maxDist) return maxDist + 1;
+
+  const m = a.length, n = b.length;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    let rowMin = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > maxDist) return maxDist + 1; // early bail
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+/**
+ * Find best fuzzy matches for an input across known names.
+ * Returns up to `limit` candidates ranked by combined prefix + distance score.
+ */
+function fuzzyMatch(input, knownNames, limit = 6) {
+  const q = canonical(input);
+  if (!q) return knownNames.slice(0, limit);
+  const scored = knownNames
+    .map(n => {
+      const c = canonical(n);
+      if (!c) return { n, score: 999 };
+      let score = lev(q, c, 8);
+      if (c.startsWith(q)) score -= 4;
+      else if (c.includes(q)) score -= 2;
+      return { n, c, score };
+    })
+    .filter(x => x.score < 8)
+    .sort((a, b) => a.score - b.score);
+  return scored.slice(0, limit).map(x => x.n);
+}
+
+__M["state/normalize.js"] = { canonical, lev, fuzzyMatch };
+}
+/* state/schema.js */
+{
+/* =====================================================================
+ * schema.js — data shape + versioned migrations
+ *
+ * v1: legacy localStorage 'trening_data_v1' (the v0.1 app)
+ *      sessions: [{id?, date, type, durationMin, rpe, kneePain,
+ *                  exercises:[{name, sets:[{reps,weight}], note}],
+ *                  comment}]
+ *      templates: { typeName: [exerciseNames] }
+ *
+ * v2 (current): adds stable IDs to exercises/sets, draft slot for active
+ *      session, settings (sync), bodyweight log, normalized exercise
+ *      names. Touch-stamp every record with createdAt/updatedAt for
+ *      conflict resolution.
+ * ===================================================================== */
+
+const { canonical } = __M["state/normalize.js"];
+
+const SCHEMA_VERSION = 2;
+
+/** Storage keys */
+const KEYS = {
+  V1: 'trening_data_v1',     // legacy
+  V2: 'trening_data_v2',     // current
+  TOKEN: 'trening_gist_token', // separate from main blob (never synced)
+};
+
+/** Generate a short stable id. */
+let _idCounter = 0;
+function uid(prefix = '') {
+  _idCounter = (_idCounter + 1) & 0xffff;
+  return prefix + Date.now().toString(36) + _idCounter.toString(36);
+}
+
+/** Build a fresh empty state. */
+function emptyState() {
+  return {
+    version: SCHEMA_VERSION,
+    sessions: [],
+    templates: {},
+    bodyweight: [],
+    draft: null,
+    settings: {
+      sync: { type: 'none', gistId: '', lastSyncedAt: 0 },
+      restDefault: 90,         // default rest seconds
+      timerSound: true,
+      timerHaptic: true,
+    },
+    updatedAt: Date.now(),
+  };
+}
+
+/** Build a fresh session object (used by editor + new). */
+function newSession({ type = '', date = todayISO(), exerciseNames = [] } = {}) {
+  return {
+    id: uid('s_'),
+    date,
+    type,
+    durationMin: null,
+    rpe: null,
+    kneePain: 0,
+    bodyweight: null,
+    exercises: exerciseNames.map(n => newExercise(n)),
+    comment: '',
+    startedAt: Date.now(),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+function newExercise(name = '') {
+  return {
+    id: uid('e_'),
+    name,
+    canonical: canonical(name),
+    note: '',
+    sets: [newSet()],
+  };
+}
+
+function newSet() {
+  return {
+    id: uid('x_'),
+    reps: '',
+    weight: '',
+    done: false,
+    restSec: null,
+  };
+}
+
+/** Normalize a session: ensure all sub-records have ids and canonical names. */
+function normalizeSession(s) {
+  s.id ||= uid('s_');
+  s.createdAt ||= Date.now();
+  s.updatedAt ||= s.createdAt;
+  s.exercises = (s.exercises || []).map(e => {
+    e.id ||= uid('e_');
+    e.canonical = canonical(e.name);
+    e.sets = (e.sets || []).map(x => {
+      x.id ||= uid('x_');
+      if (typeof x.done !== 'boolean') x.done = false;
+      return x;
+    });
+    return e;
+  });
+  return s;
+}
+
+/** Migrate from any prior version. Idempotent. */
+function migrate(raw) {
+  if (!raw) return emptyState();
+
+  // v0.1 had no version field. Detect and upgrade.
+  if (!raw.version) {
+    const out = emptyState();
+    out.sessions = (raw.sessions || []).map(s => normalizeSession({ ...s }));
+    out.templates = raw.templates || {};
+    out.updatedAt = Date.now();
+    return out;
+  }
+
+  if (raw.version === 2) return raw;
+
+  // future versions go here
+  console.warn('Unknown schema version', raw.version, '— treating as v2');
+  return raw;
+}
+
+/** Try migrating from legacy v1 localStorage key if v2 is missing. */
+function loadOrMigrate() {
+  try {
+    const v2raw = localStorage.getItem(KEYS.V2);
+    if (v2raw) return migrate(JSON.parse(v2raw));
+  } catch (e) { console.warn('v2 parse failed', e); }
+  try {
+    const v1raw = localStorage.getItem(KEYS.V1);
+    if (v1raw) {
+      const migrated = migrate(JSON.parse(v1raw));
+      console.info('Migrated v1 → v2');
+      return migrated;
+    }
+  } catch (e) { console.warn('v1 parse failed', e); }
+  return null; // caller decides whether to seed
+}
+
+/** ISO date helper. */
+function todayISO() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newSet, normalizeSession, migrate, loadOrMigrate, todayISO };
+}
+/* state/store.js */
+{
+/* =====================================================================
+ * store.js — single source of truth + autosave + change bus
+ * ===================================================================== */
+
+const { KEYS, SCHEMA_VERSION, emptyState, loadOrMigrate, normalizeSession } = __M["state/schema.js"];
+
+class Store {
+  constructor() {
+    this.state = emptyState();
+    this._subs = new Set();
+    this.sync = null;
+    this.syncStatus = 'off'; // 'off'|'ok'|'syncing'|'err'
+    this._saveTimer = 0;
+    this._syncTimer = 0;
+  }
+
+  /** Load from localStorage (with migration) or seed if first run. */
+  init(seed) {
+    const loaded = loadOrMigrate();
+    if (loaded) {
+      this.state = loaded;
+      // Persist v2 immediately after migration so we don't re-migrate next load.
+      this._persist();
+    } else if (seed) {
+      this.state = { ...emptyState(), ...seed, version: SCHEMA_VERSION };
+      this.state.sessions = (this.state.sessions || []).map(normalizeSession);
+      this._persist();
+    }
+    this.state.settings ||= emptyState().settings;
+    this.state.bodyweight ||= [];
+    this.state.templates ||= {};
+    this.state.draft ||= null;
+  }
+
+  subscribe(fn) { this._subs.add(fn); return () => this._subs.delete(fn); }
+  _emit(kind = 'data') { for (const fn of this._subs) fn(this.state, kind); }
+
+  /** Update state via a function. Triggers persist + sync + emit. */
+  update(mutator, opts = {}) {
+    mutator(this.state);
+    this.state.updatedAt = Date.now();
+    this._scheduleSave();
+    if (!opts.skipSync) this._scheduleSync();
+    if (!opts.skipEmit) this._emit('data');
+  }
+
+  setSyncStatus(status) {
+    this.syncStatus = status;
+    this._emit('sync');
+  }
+
+  _persist() {
+    try { localStorage.setItem(KEYS.V2, JSON.stringify(this.state)); }
+    catch (e) { console.error('persist failed', e); }
+  }
+
+  _scheduleSave() {
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => this._persist(), 300);
+  }
+
+  _scheduleSync() {
+    if (!this.sync) return;
+    clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(async () => {
+      this.setSyncStatus('syncing');
+      try {
+        const res = await this.sync.push(this.state);
+        if (res.gistId) {
+          this.state.settings.sync.gistId = res.gistId;
+          this._persist();
+        }
+        this.state.settings.sync.lastSyncedAt = Date.now();
+        this._persist();
+        this.setSyncStatus('ok');
+      } catch (e) {
+        console.error('sync push failed', e);
+        this.setSyncStatus('err');
+      }
+    }, 2000);
+  }
+
+  async pushNow() {
+    if (!this.sync) throw new Error('sync ni nastavljen');
+    clearTimeout(this._syncTimer);
+    this.setSyncStatus('syncing');
+    try {
+      const res = await this.sync.push(this.state);
+      if (res.gistId) this.state.settings.sync.gistId = res.gistId;
+      this.state.settings.sync.lastSyncedAt = Date.now();
+      this._persist();
+      this.setSyncStatus('ok');
+      return res;
+    } catch (e) {
+      this.setSyncStatus('err');
+      throw e;
+    }
+  }
+
+  async pullNow() {
+    if (!this.sync) throw new Error('sync ni nastavljen');
+    this.setSyncStatus('syncing');
+    try {
+      const remote = await this.sync.pull();
+      if (!remote) { this.setSyncStatus('ok'); return null; }
+      this.state = mergeStates(this.state, remote);
+      this.state.settings.sync.lastSyncedAt = Date.now();
+      this._persist();
+      this.setSyncStatus('ok');
+      this._emit('data');
+      return remote;
+    } catch (e) {
+      this.setSyncStatus('err');
+      throw e;
+    }
+  }
+
+  replaceAll(next) {
+    this.state = { ...emptyState(), ...next, version: SCHEMA_VERSION };
+    this.state.sessions = (this.state.sessions || []).map(normalizeSession);
+    this._persist();
+    this._scheduleSync();
+    this._emit('data');
+  }
+}
+
+function mergeStates(local, remote) {
+  const byId = new Map();
+  for (const s of (local.sessions || [])) byId.set(s.id, s);
+  for (const s of (remote.sessions || [])) {
+    const ex = byId.get(s.id);
+    if (!ex) { byId.set(s.id, s); continue; }
+    if ((s.updatedAt || 0) > (ex.updatedAt || 0)) byId.set(s.id, s);
+  }
+  const merged = {
+    ...local,
+    sessions: Array.from(byId.values()),
+    templates: { ...remote.templates, ...local.templates },
+    bodyweight: mergeBW(local.bodyweight || [], remote.bodyweight || []),
+    updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0),
+  };
+  merged.settings = { ...remote.settings, ...local.settings };
+  merged.draft = local.draft || null;
+  return merged;
+}
+
+function mergeBW(a, b) {
+  const map = new Map();
+  for (const e of a) map.set(e.date, e);
+  for (const e of b) {
+    const ex = map.get(e.date);
+    if (!ex || (e.updatedAt || 0) > (ex.updatedAt || 0)) map.set(e.date, e);
+  }
+  return Array.from(map.values()).sort((x, y) => x.date.localeCompare(y.date));
+}
+
+const store = new Store();
+
+__M["state/store.js"] = { mergeStates, store };
+}
+/* sync/adapter.js */
+{
+/* =====================================================================
+ * adapter.js — sync adapter contract
+ *
+ * All adapters expose the same shape:
+ *   pull()           → returns remote state JSON or null if not configured
+ *   push(state)      → uploads, returns { gistId? } if a new id was created
+ *   isConfigured()   → boolean
+ *   describe()       → user-readable status string
+ * ===================================================================== */
+
+class NoopAdapter {
+  isConfigured() { return false; }
+  describe() { return 'Brez sinhronizacije'; }
+  async pull() { return null; }
+  async push() { return {}; }
+}
+
+__M["sync/adapter.js"] = { NoopAdapter };
+}
+/* sync/gist.js */
+{
+/* =====================================================================
+ * gist.js — GitHub Gist sync adapter
+ *
+ * How it works:
+ *   - User pastes a Personal Access Token (classic, scope=gist) in Settings.
+ *     Token is stored under KEYS.TOKEN (separate localStorage entry, never
+ *     bundled into the synced state).
+ *   - First push creates a SECRET gist named "trening.json". Its id is
+ *     persisted in state.settings.sync.gistId so subsequent calls update it.
+ *   - Pull fetches the gist, parses trening.json, returns the state.
+ *
+ * Network shape:
+ *   POST  https://api.github.com/gists                  → create
+ *   PATCH https://api.github.com/gists/:id              → update content
+ *   GET   https://api.github.com/gists/:id              → read
+ *
+ * Errors:
+ *   - 401 → token bad or revoked → throw "Token zavrnjen"
+ *   - 404 → gistId stale → reset gistId, will recreate on next push
+ *   - network → throw the underlying error message
+ * ===================================================================== */
+
+const { KEYS } = __M["state/schema.js"];
+
+const API = 'https://api.github.com';
+const FILENAME = 'trening.json';
+const DESCRIPTION = 'Trening logger backup (auto)';
+
+class GistAdapter {
+  constructor(getState) {
+    /** Caller passes a fn returning current state — we pluck token + gistId. */
+    this.getState = getState;
+  }
+
+  _token() { return localStorage.getItem(KEYS.TOKEN) || ''; }
+  _gistId() { return this.getState()?.settings?.sync?.gistId || ''; }
+
+  isConfigured() { return !!this._token(); }
+
+  describe() {
+    if (!this._token()) return 'Brez tokena (odpri Nastavitve)';
+    if (!this._gistId()) return 'Token OK, gist še ni ustvarjen';
+    return `Sinhronizacija aktivna (gist ${this._gistId().slice(0, 6)}…)`;
+  }
+
+  /** Internal: HTTP helper with token auth. */
+  async _req(path, opts = {}) {
+    const token = this._token();
+    if (!token) throw new Error('Manjka GitHub token');
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
+        ...(opts.headers || {}),
+      },
+    });
+    if (res.status === 401) throw new Error('Token zavrnjen (preveri scope=gist)');
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`GitHub ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    return res.json();
+  }
+
+  /** Verify token works (used by Settings "Test connection"). */
+  async testToken() {
+    return this._req('/user'); // returns user info on 200
+  }
+
+  /** Pull the trening.json file from the configured gist. */
+  async pull() {
+    const id = this._gistId();
+    if (!id) return null;
+    try {
+      const gist = await this._req('/gists/' + id);
+      const file = gist.files?.[FILENAME];
+      if (!file) throw new Error('Gist ne vsebuje ' + FILENAME);
+      // GitHub truncates large files; if so, use raw_url
+      let content = file.content;
+      if (file.truncated && file.raw_url) {
+        const r = await fetch(file.raw_url);
+        content = await r.text();
+      }
+      return JSON.parse(content);
+    } catch (e) {
+      if (/404/.test(e.message)) {
+        // gist gone — reset
+        const s = this.getState();
+        if (s?.settings?.sync) s.settings.sync.gistId = '';
+        return null;
+      }
+      throw e;
+    }
+  }
+
+  /** Push state. Returns { gistId } on first creation. */
+  async push(state) {
+    const json = JSON.stringify(state, null, 2);
+    const body = {
+      description: DESCRIPTION,
+      files: { [FILENAME]: { content: json } },
+    };
+
+    const id = this._gistId();
+    if (id) {
+      try {
+        await this._req('/gists/' + id, { method: 'PATCH', body: JSON.stringify(body) });
+        return {};
+      } catch (e) {
+        if (/404/.test(e.message)) {
+          // stale id — fall through to create
+        } else {
+          throw e;
+        }
+      }
+    }
+    // create
+    const created = await this._req('/gists', {
+      method: 'POST',
+      body: JSON.stringify({ ...body, public: false }),
+    });
+    return { gistId: created.id };
+  }
+}
+
+__M["sync/gist.js"] = { GistAdapter };
+}
+/* lib/dom.js */
+{
+/* =====================================================================
+ * dom.js — tiny render helpers (no framework)
+ * ===================================================================== */
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+
+function esc(s) {
+  return String(s ?? '').replace(/[<>&"']/g, c => (
+    { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function el(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+function debounce(fn, ms) {
+  let t = 0;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+function toast(msg, kind = '') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1800);
+}
+
+function confirm2(msg) {
+  // Wrap window.confirm so we can swap for a custom modal later.
+  return window.confirm(msg);
+}
+
+/** Format minutes since timestamp as relative SI-style label. */
+function relTime(ts) {
+  if (!ts) return '–';
+  const diff = (Date.now() - ts) / 1000;
+  if (diff < 60) return 'pravkar';
+  if (diff < 3600) return Math.floor(diff / 60) + ' min nazaj';
+  if (diff < 86400) return Math.floor(diff / 3600) + ' h nazaj';
+  return Math.floor(diff / 86400) + ' dni nazaj';
+}
+
+const SL_MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
+const SL_DAYS = ['ned', 'pon', 'tor', 'sre', 'čet', 'pet', 'sob'];
+
+function fmtDate(s) {
+  if (!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  return `${SL_DAYS[d.getDay()]}, ${d.getDate()}. ${SL_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+const SL = { months: SL_MONTHS, days: SL_DAYS };
+
+__M["lib/dom.js"] = { $, $$, esc, el, debounce, toast, confirm2, relTime, fmtDate, SL };
+}
+/* lib/onerm.js */
+{
+/* =====================================================================
+ * onerm.js — 1-rep-max estimators
+ *
+ * Epley:    1RM = w * (1 + r/30)
+ * Brzycki:  1RM = w * 36 / (37 - r)
+ * Lombardi: 1RM = w * r^0.10
+ *
+ * For low-rep sets (1-5) Brzycki is more accurate.
+ * For higher-rep (6-15) Epley wins.
+ * Above 15 reps these formulas get fanciful; we cap at 15.
+ * Default = average of Epley + Brzycki, which tracks well for most lifters.
+ * ===================================================================== */
+
+function epley(w, r) { return w * (1 + r / 30); }
+function brzycki(w, r) {
+  if (r >= 37) return w; // would divide by zero or invert
+  return w * 36 / (37 - r);
+}
+function lombardi(w, r) { return w * Math.pow(Math.max(r, 1), 0.10); }
+
+function estimate1RM(weight, reps) {
+  if (!weight || !reps) return null;
+  const r = Math.min(15, reps);
+  if (r === 1) return weight;
+  return Math.round(((epley(weight, r) + brzycki(weight, r)) / 2) * 10) / 10;
+}
+
+/** Volume = total tonnage for a single exercise (kg). */
+function exerciseVolume(sets) {
+  return sets.reduce((s, x) => s + (Number(x.reps) || 0) * (Number(x.weight) || 0), 0);
+}
+
+__M["lib/onerm.js"] = { epley, brzycki, lombardi, estimate1RM, exerciseVolume };
+}
+/* lib/chart.js */
+{
+/* =====================================================================
+ * chart.js — minimal SVG line + bar charts
+ *
+ * No dependencies. Used by progress view.
+ * ===================================================================== */
+
+const { esc } = __M["lib/dom.js"];
+
+const W = 500, H = 200, P = { t: 14, r: 14, b: 28, l: 36 };
+
+/**
+ * Line chart with area fill.
+ * data = [{x: ISO date, y: number}]
+ */
+function lineChart(data) {
+  if (!data.length) return '<div class="empty">Ni podatkov</div>';
+
+  const ys = data.map(d => d.y);
+  const yMaxRaw = Math.max(...ys), yMinRaw = Math.min(...ys);
+  const range = Math.max(1, yMaxRaw - yMinRaw);
+  const pad = range * 0.15 || 1;
+  const yMax = yMaxRaw + pad, yMin = Math.max(0, yMinRaw - pad);
+
+  const x = i => P.l + i * ((W - P.l - P.r) / Math.max(1, data.length - 1));
+  const y = v => P.t + (1 - (v - yMin) / (yMax - yMin)) * (H - P.t - P.b);
+
+  const path = data.map((d, i) =>
+    (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(d.y).toFixed(1)
+  ).join(' ');
+  const area = path
+    + ` L${x(data.length - 1).toFixed(1)},${(H - P.b).toFixed(1)}`
+    + ` L${x(0).toFixed(1)},${(H - P.b).toFixed(1)} Z`;
+
+  const ticks = [yMin, (yMin + yMax) / 2, yMax].map(v => `
+    <line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#272c33"/>
+    <text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" fill="#5c6470" font-size="10">${Math.round(v)}</text>
+  `).join('');
+
+  const xIdxs = [0, Math.floor(data.length / 2), data.length - 1]
+    .filter((v, i, a) => a.indexOf(v) === i);
+  const xlabs = xIdxs.map(i => `
+    <text x="${x(i)}" y="${H - 8}" text-anchor="middle" fill="#5c6470" font-size="10">${esc(data[i].x.slice(5))}</text>
+  `).join('');
+
+  const dots = data.map((d, i) =>
+    `<circle cx="${x(i)}" cy="${y(d.y)}" r="3.5" fill="#ff5722"/>`
+  ).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff5722" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#ff5722" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${ticks}
+    <path d="${area}" fill="url(#g)"/>
+    <path d="${path}" stroke="#ff5722" stroke-width="2" fill="none"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    ${xlabs}
+  </svg>`;
+}
+
+/** Simple bar chart for volume over sessions. */
+function barChart(data) {
+  if (!data.length) return '<div class="empty">Ni podatkov</div>';
+  const yMax = Math.max(...data.map(d => d.y), 1);
+  const colW = (W - P.l - P.r) / data.length;
+  const x = i => P.l + i * colW;
+  const y = v => P.t + (1 - v / yMax) * (H - P.t - P.b);
+
+  const bars = data.map((d, i) => `
+    <rect x="${x(i) + 2}" y="${y(d.y)}" width="${colW - 4}"
+      height="${(H - P.b) - y(d.y)}" fill="#ff5722" rx="2"/>`
+  ).join('');
+
+  const ticks = [0, yMax / 2, yMax].map(v => `
+    <line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="#272c33"/>
+    <text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" fill="#5c6470" font-size="10">${Math.round(v)}</text>`
+  ).join('');
+
+  const xlabs = [0, data.length - 1].filter((v, i, a) => a.indexOf(v) === i)
+    .map(i => `<text x="${x(i) + colW / 2}" y="${H - 8}" text-anchor="middle"
+      fill="#5c6470" font-size="10">${esc(data[i].x.slice(5))}</text>`).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${ticks} ${bars} ${xlabs}
+  </svg>`;
+}
+
+__M["lib/chart.js"] = { lineChart, barChart };
+}
+/* lib/autocomplete.js */
+{
+/* =====================================================================
+ * autocomplete.js — exercise name suggester
+ *
+ * Wires a popup under an input that lists fuzzy matches drawn from
+ * (a) prior exercise names in the user's data, with display name + count.
+ * Click to commit. Escape/blur to close.
+ * ===================================================================== */
+
+const { fuzzyMatch, canonical } = __M["state/normalize.js"];
+const { esc } = __M["lib/dom.js"];
+
+/**
+ * Build a list of exercise candidates from sessions.
+ * Returns array of { name, canonical, count } sorted by recent use.
+ */
+function buildCandidates(sessions) {
+  const map = new Map(); // canonical → { name, canonical, count, lastUsed }
+  for (const s of sessions) {
+    for (const e of (s.exercises || [])) {
+      const c = e.canonical || canonical(e.name);
+      if (!c) continue;
+      const cur = map.get(c) || { name: e.name, canonical: c, count: 0, lastUsed: '' };
+      cur.count++;
+      if (s.date > cur.lastUsed) { cur.lastUsed = s.date; cur.name = e.name; } // most recent display
+      map.set(c, cur);
+    }
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.lastUsed.localeCompare(a.lastUsed));
+}
+
+/**
+ * Attach autocomplete behavior to an input element.
+ * @param {HTMLInputElement} input
+ * @param {Array} candidates
+ * @param {(name)=>void} onPick
+ */
+function attachAutocomplete(input, candidates, onPick) {
+  let list = null;
+  const close = () => { list?.remove(); list = null; };
+  const open = () => {
+    close();
+    const q = input.value.trim();
+    const names = candidates.map(c => c.name);
+    const hits = q
+      ? fuzzyMatch(q, names, 6)
+      : names.slice(0, 6);
+    if (!hits.length) return;
+    list = document.createElement('div');
+    list.className = 'ac-list';
+    list.innerHTML = hits.map(n => `<button type="button" data-pick="${esc(n)}">${esc(n)}</button>`).join('');
+    list.addEventListener('mousedown', e => {
+      // mousedown so it fires before the input blur
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      e.preventDefault();
+      input.value = btn.dataset.pick;
+      onPick(btn.dataset.pick);
+      close();
+    });
+    input.parentElement.appendChild(list);
+  };
+  input.addEventListener('focus', open);
+  input.addEventListener('input', open);
+  input.addEventListener('blur', () => setTimeout(close, 120));
+  input.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+}
+
+__M["lib/autocomplete.js"] = { buildCandidates, attachAutocomplete };
+}
+/* lib/pr.js */
+{
+/* =====================================================================
+ * pr.js — personal record detection
+ *
+ * Three PR types per exercise (canonical):
+ *   - weightPR : heaviest single set weight
+ *   - repsPR   : most reps at >0 weight (or any reps if bodyweight)
+ *   - e1rmPR   : highest estimated 1RM (Epley/Brzycki avg)
+ *
+ * Used both for the active screen ("you just hit a PR") and the home card.
+ * ===================================================================== */
+
+const { canonical } = __M["state/normalize.js"];
+const { estimate1RM } = __M["lib/onerm.js"];
+
+/** Aggregate per-exercise PRs across all sessions, optionally excluding one id. */
+function buildPRIndex(sessions, excludeSessionId = null) {
+  const idx = {}; // canonical → { weight, reps, e1rm, exampleName }
+  for (const s of sessions) {
+    if (s.id === excludeSessionId) continue;
+    for (const e of (s.exercises || [])) {
+      const c = e.canonical || canonical(e.name);
+      const cur = idx[c] || { weight: 0, reps: 0, e1rm: 0, exampleName: e.name };
+      for (const x of (e.sets || [])) {
+        const w = Number(x.weight) || 0;
+        const r = Number(x.reps) || 0;
+        if (w > cur.weight) cur.weight = w;
+        if (r > cur.reps) cur.reps = r;
+        const er = estimate1RM(w, r) || 0;
+        if (er > cur.e1rm) cur.e1rm = er;
+      }
+      idx[c] = cur;
+    }
+  }
+  return idx;
+}
+
+/**
+ * Check whether a just-logged set beats the prior PR for this exercise.
+ * Returns { type, value } or null.
+ */
+function checkSetPR(prIdx, exerciseName, set) {
+  const c = canonical(exerciseName);
+  const prior = prIdx[c] || { weight: 0, reps: 0, e1rm: 0 };
+  const w = Number(set.weight) || 0;
+  const r = Number(set.reps) || 0;
+  const er = estimate1RM(w, r) || 0;
+  if (w > 0 && w > prior.weight) return { type: 'weight', value: w, label: 'TEŽA' };
+  if (er > 0 && er > prior.e1rm + 0.5) return { type: 'e1rm', value: er, label: 'OCENJEN 1RM' };
+  if (r > prior.reps && w >= prior.weight * 0.95) return { type: 'reps', value: r, label: 'PONOVITVE' };
+  return null;
+}
+
+__M["lib/pr.js"] = { buildPRIndex, checkSetPR };
+}
+/* lib/timer.js */
+{
+/* =====================================================================
+ * timer.js — rest timer with countdown, beep, vibrate
+ *
+ * Single global timer. Caller subscribes to ticks/done.
+ * Renders a fixed bar above the bottom nav.
+ *
+ * Audio: synth beep via Web Audio (no asset to ship).
+ * Haptic: navigator.vibrate (Android only — Safari ignores silently).
+ * ===================================================================== */
+
+class RestTimer {
+  constructor() {
+    this.remaining = 0;
+    this.total = 0;
+    this.handle = 0;
+    this.label = '';
+    this.onDoneCb = null;
+    this.subs = new Set();
+  }
+
+  subscribe(fn) { this.subs.add(fn); return () => this.subs.delete(fn); }
+  _emit() { for (const fn of this.subs) fn(this.snapshot()); }
+
+  snapshot() {
+    return { remaining: this.remaining, total: this.total, running: !!this.handle, label: this.label };
+  }
+
+  start(seconds, opts = {}) {
+    this.stop();
+    this.remaining = seconds;
+    this.total = seconds;
+    this.label = opts.label || 'Počitek';
+    this.onDoneCb = opts.onDone || null;
+    this.useSound = opts.sound !== false;
+    this.useHaptic = opts.haptic !== false;
+    this.handle = setInterval(() => this._tick(), 1000);
+    this._emit();
+  }
+
+  add(seconds) {
+    if (!this.handle) return;
+    this.remaining = Math.max(0, this.remaining + seconds);
+    this.total = Math.max(this.total, this.remaining);
+    this._emit();
+  }
+
+  stop() {
+    if (this.handle) clearInterval(this.handle);
+    this.handle = 0;
+    this.remaining = 0;
+    this.total = 0;
+    this.label = '';
+    this._emit();
+  }
+
+  _tick() {
+    this.remaining = Math.max(0, this.remaining - 1);
+    if (this.remaining === 0) this._fire();
+    this._emit();
+  }
+
+  _fire() {
+    if (this.handle) clearInterval(this.handle);
+    this.handle = 0;
+    if (this.useSound) beep();
+    if (this.useHaptic && navigator.vibrate) navigator.vibrate([200, 80, 200]);
+    if (this.onDoneCb) try { this.onDoneCb(); } catch (e) { console.error(e); }
+  }
+}
+
+/** Synth beep via Web Audio. */
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    g.gain.value = 0.001;
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    setTimeout(() => { o.stop(); ctx.close(); }, 600);
+  } catch (e) { /* ignore */ }
+}
+
+const timer = new RestTimer();
+
+/** Mount the timer bar — wires DOM, subscribes to ticks. */
+function mountTimerBar() {
+  const root = document.createElement('div');
+  root.className = 'timer-bar hidden';
+  root.innerHTML = `
+    <div class="t-time">--:--</div>
+    <div class="t-label">Počitek</div>
+    <button class="t-add">+30s</button>
+    <button class="t-stop">Stop</button>`;
+  document.body.appendChild(root);
+
+  const tTime = root.querySelector('.t-time');
+  const tLabel = root.querySelector('.t-label');
+  root.querySelector('.t-add').onclick = () => timer.add(30);
+  root.querySelector('.t-stop').onclick = () => timer.stop();
+
+  timer.subscribe(snap => {
+    if (!snap.running && snap.remaining === 0 && snap.total === 0) {
+      root.classList.add('hidden');
+      return;
+    }
+    root.classList.remove('hidden');
+    const m = Math.floor(snap.remaining / 60);
+    const s = snap.remaining % 60;
+    tTime.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    tLabel.textContent = snap.label;
+    root.classList.toggle('warn', snap.remaining > 0 && snap.remaining <= 10);
+    root.classList.toggle('done', snap.remaining === 0 && snap.total > 0);
+    if (snap.remaining === 0 && snap.total > 0) {
+      // hold "done" for a moment, then auto-clear
+      setTimeout(() => timer.stop(), 3000);
+    }
+  });
+}
+
+__M["lib/timer.js"] = { timer, mountTimerBar };
+}
+/* views/pr_flash.js */
+{
+/* =====================================================================
+ * pr_flash.js — fullscreen PR celebration
+ * ===================================================================== */
+const { esc } = __M["lib/dom.js"];
+
+function celebratePR(exerciseName, pr) {
+  const wrap = document.createElement('div');
+  wrap.className = 'pr-flash';
+  wrap.innerHTML = `
+    <div class="pr-medal">🏆</div>
+    <div class="pr-text">${esc(exerciseName)}<br><span class="pr-num">NOVI ${esc(pr.label)} ${esc(pr.value)}</span></div>
+  `;
+  document.body.appendChild(wrap);
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+  const dismiss = () => wrap.remove();
+  wrap.addEventListener('click', dismiss);
+  setTimeout(dismiss, 2500);
+}
+
+__M["views/pr_flash.js"] = { celebratePR };
+}
+/* views/editor.js */
+{
+/* =====================================================================
+ * editor.js — shared session editor used by Active and Detail-edit views
+ *
+ * Why share: the form is identical except for what "Save" does.
+ *   - Active mode: writes to store.state.draft on every change, Save promotes
+ *     draft → sessions[]; Cancel clears draft.
+ *   - Edit mode: writes to a copy of the existing session, Save replaces in
+ *     sessions[]; Cancel discards.
+ *
+ * The editor itself is dumb: it takes a session object, mutates it in place
+ * via the provided onChange callback, and returns HTML + binding fn.
+ * ===================================================================== */
+
+const { esc, toast, confirm2, debounce } = __M["lib/dom.js"];
+const { newExercise, newSet } = __M["state/schema.js"];
+const { canonical } = __M["state/normalize.js"];
+const { attachAutocomplete, buildCandidates } = __M["lib/autocomplete.js"];
+const { timer } = __M["lib/timer.js"];
+const { buildPRIndex, checkSetPR } = __M["lib/pr.js"];
+const { celebratePR } = __M["views/pr_flash.js"];
+
+/**
+ * Render an editable session form into the given container.
+ * @param {HTMLElement} container
+ * @param {object} session   the mutable session object
+ * @param {object} opts      { allSessions, onChange, onSave, onCancel,
+ *                             saveLabel, restDefault, prCelebrationOn,
+ *                             timerSound, timerHaptic }
+ */
+function renderEditor(container, session, opts) {
+  const candidates = buildCandidates(opts.allSessions || []);
+  const prIdx = buildPRIndex(opts.allSessions || [], session.id);
+
+  const onChange = debounce(opts.onChange || (() => {}), 200);
+
+  const re = () => render(container, session, candidates, prIdx, opts, onChange);
+  re();
+
+  // public-ish methods callers can hook
+  return {
+    rerender: re,
+  };
+}
+
+function render(container, session, candidates, prIdx, opts, onChange) {
+  let html = '';
+
+  /* meta block */
+  html += `<div class="card">
+    <div class="grid2">
+      <div class="field"><label>Datum</label>
+        <input type="date" data-bind="date" value="${esc(session.date)}"></div>
+      <div class="field"><label>Trajanje (min)</label>
+        <input type="number" inputmode="numeric" data-bind="durationMin"
+          value="${session.durationMin ?? ''}" placeholder="auto"></div>
+    </div>
+    <div class="field"><label>Tip treninga</label>
+      <input type="text" data-bind="type" value="${esc(session.type || '')}"></div>
+    <div class="field"><label>RPE (1–10)</label>
+      <div class="rpe-row">${[1,2,3,4,5,6,7,8,9,10].map(n =>
+        `<button class="rpe-btn" data-rpe="${n}" data-active="${session.rpe===n}">${n}</button>`
+      ).join('')}</div>
+    </div>
+    <div class="field"><label>Bolečina v kolenu</label>
+      <div class="knee-row">${[0,1,2,3].map(n =>
+        `<button class="knee-btn" data-v="${n}" data-knee="${n}" data-active="${session.kneePain===n}">${n}</button>`
+      ).join('')}</div>
+      <div class="muted" style="font-size:11px;margin-top:4px">0 = brez · 3 = huda</div>
+    </div>
+    <div class="field"><label>Telesna teža (kg, neobv.)</label>
+      <input type="number" step="0.1" inputmode="decimal" data-bind="bodyweight"
+        value="${session.bodyweight ?? ''}" placeholder="–"></div>
+  </div>`;
+
+  /* exercises */
+  session.exercises.forEach((ex, i) => {
+    const lastDone = lastDoneTopFor(ex.name, opts.allSessions || [], session.id);
+    const c = canonical(ex.name);
+    const pr = prIdx[c];
+    const hint = lastDone
+      ? `zadnjič: <b style="color:var(--txt)">${lastDone.reps||'–'}×${lastDone.weight}kg</b>` +
+        (pr?.weight ? ` · PR ${pr.weight}kg` : '')
+      : (pr?.weight ? `PR: <b style="color:var(--txt)">${pr.weight}kg × ${pr.reps||'–'}</b>` : '');
+
+    html += `<div class="ex-block" data-ex-idx="${i}">
+      <div class="ex-name">
+        <input type="text" data-ex-name="${i}" value="${esc(ex.name)}" placeholder="Ime vaje">
+        <button class="x" data-ex-del="${i}" title="Izbriši vajo">×</button>
+      </div>
+      ${hint ? `<div class="ex-hint">${hint}</div>` : ''}
+      <div class="set-row head"><div></div><div>Pon.</div><div>kg</div><div></div><div></div></div>
+      ${ex.sets.map((st, j) => `
+        <div class="set-row ${st.done?'set-done':''}" data-set="${i}-${j}">
+          <div class="idx">${j+1}</div>
+          <input type="number" inputmode="numeric" data-set-bind="${i}-${j}-reps"
+            value="${st.reps ?? ''}" placeholder="–">
+          <input type="number" inputmode="decimal" step="0.5" data-set-bind="${i}-${j}-weight"
+            value="${st.weight ?? ''}" placeholder="kg">
+          <button class="done-btn" data-set-done="${i}-${j}" data-done="${st.done}"
+            title="Označi serijo kot opravljeno">${st.done?'✓':'•'}</button>
+          <button class="x" data-set-del="${i}-${j}" title="Izbriši serijo">×</button>
+        </div>
+      `).join('')}
+      <div class="set-add">
+        <button class="btn ghost sm" data-set-add="${i}">＋ Serija</button>
+      </div>
+      <div class="opomba">
+        <textarea data-bind="ex-note-${i}" placeholder="Opomba (npr. limit, bolečina, lažji prihodnjič)">${esc(ex.note||'')}</textarea>
+      </div>
+    </div>`;
+  });
+
+  html += `<button class="btn ghost" data-add-ex style="margin-bottom:10px">＋ Dodaj vajo</button>`;
+
+  html += `<div class="card">
+    <h2>Komentar (kardio, splošno)</h2>
+    <textarea data-bind="comment" placeholder="npr. Kardio 2km, 18 incline, hitrost 3.5">${esc(session.comment||'')}</textarea>
+  </div>`;
+
+  /* save / cancel */
+  html += `<div class="row" style="gap:8px;margin-bottom:20px">
+    <button class="btn danger" style="flex:0 0 auto" data-cancel>Prekliči</button>
+    <button class="btn success" data-save>${esc(opts.saveLabel || 'Shrani')}</button>
+  </div>`;
+
+  container.innerHTML = html;
+  bind(container, session, candidates, prIdx, opts, onChange);
+}
+
+/* ---------------------------------------------------------------- bind */
+
+function bind(container, session, candidates, prIdx, opts, onChange) {
+  const touch = () => { session.updatedAt = Date.now(); onChange(session); };
+
+  /* metadata text/number/date */
+  container.querySelectorAll('[data-bind]').forEach(inp => {
+    const key = inp.dataset.bind;
+    inp.addEventListener('input', () => {
+      const v = inp.value;
+      if (key === 'durationMin' || key === 'bodyweight') {
+        session[key] = v === '' ? null : Number(v);
+      } else if (key === 'comment' || key === 'date' || key === 'type') {
+        session[key] = v;
+      } else if (key.startsWith('ex-note-')) {
+        const i = +key.split('-')[2];
+        session.exercises[i].note = v;
+      }
+      touch();
+    });
+  });
+
+  /* RPE */
+  container.querySelectorAll('[data-rpe]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      session.rpe = +btn.dataset.rpe;
+      touch();
+      // visual feedback without full re-render
+      container.querySelectorAll('[data-rpe]').forEach(b =>
+        b.dataset.active = (b === btn));
+    });
+  });
+  container.querySelectorAll('[data-knee]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      session.kneePain = +btn.dataset.knee;
+      touch();
+      container.querySelectorAll('[data-knee]').forEach(b =>
+        b.dataset.active = (b === btn));
+    });
+  });
+
+  /* exercise name + autocomplete */
+  container.querySelectorAll('[data-ex-name]').forEach(inp => {
+    const i = +inp.dataset.exName;
+    attachAutocomplete(inp, candidates, name => {
+      session.exercises[i].name = name;
+      session.exercises[i].canonical = canonical(name);
+      touch();
+    });
+    inp.addEventListener('input', () => {
+      session.exercises[i].name = inp.value;
+      session.exercises[i].canonical = canonical(inp.value);
+      touch();
+    });
+  });
+
+  /* exercise delete */
+  container.querySelectorAll('[data-ex-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm2('Izbriši vajo?')) return;
+      const i = +btn.dataset.exDel;
+      session.exercises.splice(i, 1);
+      touch();
+      render(container, session, candidates, prIdx, opts, onChange);
+    });
+  });
+
+  /* set value bindings */
+  container.querySelectorAll('[data-set-bind]').forEach(inp => {
+    const [iS, jS, key] = inp.dataset.setBind.split('-');
+    const i = +iS, j = +jS;
+    inp.addEventListener('input', () => {
+      const v = inp.value;
+      session.exercises[i].sets[j][key] = v === '' ? '' : Number(v);
+      touch();
+    });
+  });
+
+  /* set add */
+  container.querySelectorAll('[data-set-add]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.setAdd;
+      session.exercises[i].sets.push(newSet());
+      touch();
+      render(container, session, candidates, prIdx, opts, onChange);
+    });
+  });
+
+  /* set delete */
+  container.querySelectorAll('[data-set-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [iS, jS] = btn.dataset.setDel.split('-');
+      const i = +iS, j = +jS;
+      session.exercises[i].sets.splice(j, 1);
+      if (session.exercises[i].sets.length === 0) {
+        session.exercises[i].sets.push(newSet());
+      }
+      touch();
+      render(container, session, candidates, prIdx, opts, onChange);
+    });
+  });
+
+  /* set done — mark complete + start rest timer + autofocus next */
+  container.querySelectorAll('[data-set-done]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [iS, jS] = btn.dataset.setDone.split('-');
+      const i = +iS, j = +jS;
+      const s = session.exercises[i].sets[j];
+      s.done = !s.done;
+      touch();
+
+      if (s.done) {
+        // PR check
+        const pr = checkSetPR(prIdx, session.exercises[i].name, s);
+        if (pr && opts.prCelebrationOn !== false) {
+          celebratePR(session.exercises[i].name, pr);
+        }
+        // start rest timer
+        const rest = opts.restDefault || 90;
+        timer.start(rest, {
+          label: `Počitek — ${session.exercises[i].name || 'vaja'}`,
+          sound: opts.timerSound,
+          haptic: opts.timerHaptic,
+        });
+        // autofocus next set
+        focusNextSet(container, i, j);
+      } else {
+        timer.stop();
+      }
+      // re-render this set for visual update
+      const row = container.querySelector(`[data-set="${i}-${j}"]`);
+      if (row) {
+        row.classList.toggle('set-done', s.done);
+        const b = row.querySelector('[data-set-done]');
+        b.dataset.done = s.done;
+        b.textContent = s.done ? '✓' : '•';
+      }
+    });
+  });
+
+  /* add exercise */
+  const addBtn = container.querySelector('[data-add-ex]');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    session.exercises.push(newExercise(''));
+    touch();
+    render(container, session, candidates, prIdx, opts, onChange);
+  });
+
+  /* save / cancel */
+  const saveBtn = container.querySelector('[data-save]');
+  if (saveBtn) saveBtn.addEventListener('click', () => opts.onSave?.());
+  const cancelBtn = container.querySelector('[data-cancel]');
+  if (cancelBtn) cancelBtn.addEventListener('click', () => opts.onCancel?.());
+}
+
+/* ---------------------------------------------------------------- helpers */
+
+function focusNextSet(container, i, j) {
+  // try next set in same exercise; if last, jump to first input of next exercise.
+  const tryFocus = (sel) => {
+    const el = container.querySelector(sel);
+    if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return true; }
+    return false;
+  };
+  if (tryFocus(`[data-set-bind="${i}-${j+1}-reps"]`)) return;
+  if (tryFocus(`[data-set-bind="${i+1}-0-reps"]`)) return;
+}
+
+function lastDoneTopFor(exerciseName, sessions, excludeId) {
+  // most recent session containing this exercise (canonical match), return top set
+  const c = canonical(exerciseName);
+  if (!c) return null;
+  const sorted = [...sessions]
+    .filter(s => s.id !== excludeId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of sorted) {
+    const ex = (s.exercises || []).find(e => (e.canonical || canonical(e.name)) === c);
+    if (!ex || !ex.sets) continue;
+    let top = null;
+    for (const st of ex.sets) {
+      if (!st.weight && !st.reps) continue;
+      if (!top || (Number(st.weight)||0) > (Number(top.weight)||0)) top = st;
+    }
+    if (top) return top;
+  }
+  return null;
+}
+
+__M["views/editor.js"] = { renderEditor };
+}
+/* views/active.js */
+{
+/* =====================================================================
+ * active.js — live workout view
+ *
+ * The session being edited lives in store.state.draft. Every change to
+ * the form mutates the draft and triggers store.update() (autosave).
+ * On save: draft is promoted into sessions[]. On cancel: draft cleared.
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { newSession } = __M["state/schema.js"];
+const { renderEditor } = __M["views/editor.js"];
+const { toast, confirm2 } = __M["lib/dom.js"];
+
+/** Public API: start a new draft from a template (or empty). */
+function startNew(type, exerciseNames) {
+  store.update(s => {
+    s.draft = newSession({ type, exerciseNames });
+  });
+}
+
+/** Public API: start a draft by repeating a prior session. */
+function repeatFrom(srcId) {
+  const src = store.state.sessions.find(s => s.id === srcId);
+  if (!src) return;
+  store.update(s => {
+    const draft = newSession({ type: src.type });
+    draft.exercises = (src.exercises || []).map(e => ({
+      id: 'e_' + Math.random().toString(36).slice(2, 8),
+      name: e.name,
+      canonical: e.canonical,
+      note: '',
+      sets: (e.sets || []).map(x => ({
+        id: 'x_' + Math.random().toString(36).slice(2, 8),
+        reps: '', weight: '', done: false, restSec: null,
+      })),
+    }));
+    if (!draft.exercises.length) {
+      draft.exercises = [{ id: 'e_x', name: '', canonical: '', note: '', sets: [{ id: 'x_x', reps: '', weight: '', done: false }] }];
+    }
+    s.draft = draft;
+  });
+}
+
+function render(container, router) {
+  const draft = store.state.draft;
+  if (!draft) { router.go('new'); return; }
+
+  document.getElementById('title').textContent = draft.type || 'Prazen trening';
+  document.getElementById('subtitle').textContent = 'V teku · samodejno shranjevanje';
+
+  renderEditor(container, draft, {
+    allSessions: store.state.sessions,
+    saveLabel: 'Shrani trening',
+    restDefault: store.state.settings.restDefault,
+    timerSound: store.state.settings.timerSound,
+    timerHaptic: store.state.settings.timerHaptic,
+    prCelebrationOn: true,
+    onChange: () => {
+      // Already in draft — persist + sync, but DO NOT re-emit to avoid
+      // re-rendering the form on every keystroke (which would reset focus).
+      store.update(() => { /* mutation already happened on the draft reference */ }, { skipEmit: true });
+    },
+    onSave: () => commit(router),
+    onCancel: () => cancel(router),
+  });
+}
+
+function commit(router) {
+  const d = store.state.draft;
+  if (!d) return;
+
+  // Auto-fill duration if not set.
+  if (!d.durationMin && d.startedAt) {
+    const mins = Math.round((Date.now() - d.startedAt) / 60000);
+    if (mins > 0 && mins < 300) d.durationMin = mins;
+  }
+
+  // Drop empty sets and empty exercises.
+  d.exercises = d.exercises
+    .map(e => ({ ...e, sets: e.sets.filter(st => st.reps !== '' || st.weight !== '') }))
+    .filter(e => e.name && e.name.trim());
+
+  if (!d.exercises.length) {
+    if (!confirm2('Trening nima vaj. Vseeno shrani?')) return;
+  }
+
+  // Update bodyweight log if user filled it
+  store.update(s => {
+    if (d.bodyweight) {
+      const ex = (s.bodyweight || []).find(b => b.date === d.date);
+      if (ex) ex.weight = d.bodyweight;
+      else (s.bodyweight ||= []).push({ date: d.date, weight: d.bodyweight, updatedAt: Date.now() });
+    }
+    // Save template
+    if (d.type && d.exercises.length) {
+      s.templates[d.type] = d.exercises.map(e => e.name);
+    }
+    // Promote draft → sessions[]
+    s.sessions = s.sessions.filter(x => x.id !== d.id);
+    s.sessions.push({ ...d, updatedAt: Date.now() });
+    s.draft = null;
+  });
+  toast('Shranjeno');
+  router.go('detail', d.id);
+}
+
+function cancel(router) {
+  if (!confirm2('Zavrži trening v teku? Podatki bodo izgubljeni.')) return;
+  store.update(s => { s.draft = null; });
+  router.go('home');
+}
+
+__M["views/active.js"] = { startNew, repeatFrom, render };
+}
+/* views/home.js */
+{
+/* =====================================================================
+ * home.js — landing screen with quick stats + last session + actions
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { esc, fmtDate, SL } = __M["lib/dom.js"];
+const { buildPRIndex } = __M["lib/pr.js"];
+
+function render(container, router) {
+  const data = store.state;
+  const ss = sortedSessions(data.sessions);
+  const last = ss[0];
+
+  document.getElementById('title').textContent = 'Trening';
+  document.getElementById('subtitle').textContent =
+    new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const wk = ss.filter(s => new Date(s.date) >= cutoff);
+  const totalMin = wk.reduce((a, s) => a + (s.durationMin || 0), 0);
+  const avgRpe = wk.length
+    ? (wk.reduce((a, s) => a + (s.rpe || 0), 0) / wk.length).toFixed(1)
+    : '–';
+
+  const legSessions = ss.filter(s => /nog|leg|kolen|VMO/i.test(s.type || '')).slice(0, 5).reverse();
+  const lastLegPain = ss.find(s => /nog|leg|kolen|VMO/i.test(s.type || ''))?.kneePain ?? 0;
+
+  let html = '';
+
+  /* big new workout button */
+  html += `<button class="btn" data-go="new" style="margin-bottom:14px;font-size:17px;padding:18px">
+    ＋ Nov trening</button>`;
+
+  if (last) {
+    const pr = topPRsFor(last, data.sessions);
+    html += `<div class="card" data-detail="${esc(last.id)}" style="cursor:pointer">
+      <div class="spread">
+        <h2 style="margin:0">Zadnji trening</h2>
+        <span class="muted" style="font-size:12px">${fmtDate(last.date)}</span>
+      </div>
+      <div style="font-weight:700;font-size:16px;margin-top:8px">${esc(last.type || '?')}</div>
+      <div class="row wrap" style="gap:6px;margin-top:8px">
+        <span class="badge rpe">RPE ${last.rpe ?? '–'}</span>
+        <span class="badge rpe">${last.durationMin ?? '–'} min</span>
+        <span class="badge rpe">${last.exercises?.length ?? 0} vaj</span>
+        ${last.kneePain ? `<span class="badge knee${last.kneePain}">Koleno ${last.kneePain}</span>` : ''}
+        ${pr ? `<span class="badge pr">★ ${esc(pr)}</span>` : ''}
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="stat-grid">
+    <div class="stat"><div class="v">${wk.length}</div><div class="l">7 dni</div></div>
+    <div class="stat"><div class="v">${totalMin}</div><div class="l">Skupaj min</div></div>
+    <div class="stat"><div class="v">${avgRpe}</div><div class="l">Povp. RPE</div></div>
+  </div>`;
+
+  if (legSessions.length) {
+    html += `<div class="card">
+      <h2>Bolečina v kolenu</h2>
+      <div class="row" style="gap:6px;justify-content:space-between">
+        ${legSessions.map(s => `
+          <div style="flex:1;text-align:center">
+            <div class="badge knee${s.kneePain||0}" style="display:block;padding:6px 0">${s.kneePain||0}</div>
+            <div class="muted" style="font-size:10px;margin-top:4px">${s.date.slice(5).replace('-','/')}</div>
+          </div>`).join('')}
+      </div>
+      ${lastLegPain >= 2 ? `
+        <div style="margin-top:10px;padding:10px;background:#3a1a1a;border-radius:8px;color:#ff9090;font-size:13px">
+          ⚠ Zadnji noge trening = bolečina ${lastLegPain}. Razmisli o lažji obremenitvi.
+        </div>` : ''}
+    </div>`;
+  }
+
+  if (ss.length > 1) {
+    html += `<div class="card"><h2>Nedavno</h2>`;
+    for (const s of ss.slice(0, 5)) html += sessionRow(s);
+    html += `</div>`;
+  }
+
+  if (!ss.length) {
+    html += `<div class="card empty">Ni še treningov. Tapni "Nov trening" za začetek.</div>`;
+  }
+
+  container.innerHTML = html;
+
+  /* events */
+  container.querySelectorAll('[data-go]').forEach(b =>
+    b.addEventListener('click', () => router.go(b.dataset.go)));
+  container.querySelectorAll('[data-detail]').forEach(b =>
+    b.addEventListener('click', () => router.go('detail', b.dataset.detail)));
+}
+
+function sortedSessions(arr) {
+  return [...(arr || [])].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function sessionRow(s) {
+  const d = new Date(s.date + 'T00:00:00');
+  return `<div class="sess-row" data-detail="${esc(s.id)}">
+    <div class="when"><div class="d">${d.getDate()}</div><div class="m">${SL.months[d.getMonth()]}</div></div>
+    <div class="body">
+      <div class="ttl">${esc(s.type || '?')}</div>
+      <div class="meta">${s.exercises?.length||0} vaj · ${s.durationMin||'?'} min · RPE ${s.rpe||'?'}</div>
+    </div>
+    ${s.kneePain ? `<span class="badge knee${s.kneePain}">K ${s.kneePain}</span>` : ''}
+  </div>`;
+}
+
+function topPRsFor(sess, allSessions) {
+  const prior = buildPRIndex(allSessions.filter(s =>
+    s.id !== sess.id && new Date(s.date) < new Date(sess.date)));
+  for (const e of (sess.exercises || [])) {
+    const c = e.canonical;
+    const cur = prior[c]; if (!cur) continue;
+    let topW = 0;
+    for (const x of (e.sets || [])) {
+      const w = Number(x.weight) || 0;
+      if (w > topW) topW = w;
+    }
+    if (topW > cur.weight && cur.weight > 0) return `${e.name} ${topW}kg`;
+  }
+  return null;
+}
+
+__M["views/home.js"] = { render };
+}
+/* views/new.js */
+{
+/* =====================================================================
+ * new.js — pick a workout template, or repeat a recent session
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { esc, fmtDate } = __M["lib/dom.js"];
+const { startNew, repeatFrom } = __M["views/active.js"];
+
+function render(container, router) {
+  document.getElementById('title').textContent = 'Nov trening';
+  document.getElementById('subtitle').textContent = 'Izberi tip ali ponovi prejšnjega';
+
+  const tpls = store.state.templates || {};
+  const ss = [...store.state.sessions].sort((a, b) => b.date.localeCompare(a.date));
+
+  let html = `<div class="card"><h2>Predloge</h2><div class="tpl-grid">`;
+  for (const k of Object.keys(tpls)) {
+    html += `<button class="tpl-card" data-tpl="${esc(k)}">
+      <h3>${esc(k)}</h3>
+      <div class="ex-count">${tpls[k].length} vaj</div>
+    </button>`;
+  }
+  html += `<button class="tpl-card" data-tpl="">
+    <h3>＋ Prazen trening</h3>
+    <div class="ex-count">brez predloge</div>
+  </button>`;
+  html += `</div></div>`;
+
+  if (ss.length) {
+    html += `<div class="card"><h2>Ponovi nedaven</h2>`;
+    const seen = new Set();
+    for (const s of ss) {
+      if (!s.type || seen.has(s.type)) continue; seen.add(s.type);
+      html += `<div class="sess-row" data-repeat="${esc(s.id)}">
+        <div class="body">
+          <div class="ttl">${esc(s.type)}</div>
+          <div class="meta">zadnjič ${fmtDate(s.date)}</div>
+        </div>
+        <span class="muted">↻</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('[data-tpl]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const tpl = btn.dataset.tpl;
+      startNew(tpl, tpl ? (tpls[tpl] || []) : []);
+      router.go('active');
+    }));
+  container.querySelectorAll('[data-repeat]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      repeatFrom(btn.dataset.repeat);
+      router.go('active');
+    }));
+}
+
+__M["views/new.js"] = { render };
+}
+/* views/history.js */
+{
+/* =====================================================================
+ * history.js — searchable, filterable history
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { esc, SL } = __M["lib/dom.js"];
+
+let _query = '';
+let _typeFilter = ''; // empty = all
+let _kneeOnly = false;
+
+function render(container, router) {
+  document.getElementById('title').textContent = 'Zgodovina';
+  document.getElementById('subtitle').textContent = `${store.state.sessions.length} treningov`;
+
+  const ss = [...store.state.sessions].sort((a, b) => b.date.localeCompare(a.date));
+  if (!ss.length) {
+    container.innerHTML = `<div class="card empty">Ni še treningov.</div>`;
+    return;
+  }
+
+  const types = Array.from(new Set(ss.map(s => s.type).filter(Boolean)));
+
+  let html = `<div class="filter-row">
+    <input id="histQ" type="search" placeholder="Iskanje (vaja, opomba…)" value="${esc(_query)}">
+  </div>
+  <div class="row wrap" style="gap:6px;margin-bottom:12px">
+    <button class="chip" data-type="" data-active="${_typeFilter===''}">Vse</button>
+    ${types.map(t => `<button class="chip" data-type="${esc(t)}" data-active="${_typeFilter===t}">${esc(t)}</button>`).join('')}
+    <button class="chip" data-knee="1" data-active="${_kneeOnly}">Bolečina</button>
+  </div>`;
+
+  const filtered = ss.filter(s => {
+    if (_typeFilter && s.type !== _typeFilter) return false;
+    if (_kneeOnly && !(s.kneePain > 0)) return false;
+    if (_query) {
+      const q = _query.toLowerCase();
+      const inHay =
+        (s.type || '').toLowerCase().includes(q) ||
+        (s.comment || '').toLowerCase().includes(q) ||
+        (s.exercises || []).some(e =>
+          e.name.toLowerCase().includes(q) ||
+          (e.note || '').toLowerCase().includes(q));
+      if (!inHay) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    html += `<div class="card empty">Ni rezultatov.</div>`;
+  } else {
+    const groups = {};
+    for (const s of filtered) (groups[s.date.slice(0, 7)] ||= []).push(s);
+    for (const k of Object.keys(groups)) {
+      const [y, m] = k.split('-');
+      html += `<div class="card">
+        <h2>${SL.months[+m - 1]} ${y}</h2>
+        ${groups[k].map(sessionRow).join('')}
+      </div>`;
+    }
+  }
+
+  container.innerHTML = html;
+
+  /* events */
+  const q = container.querySelector('#histQ');
+  q.addEventListener('input', () => {
+    _query = q.value;
+    render(container, router);
+    setTimeout(() => container.querySelector('#histQ')?.focus(), 0);
+  });
+  container.querySelectorAll('[data-type]').forEach(c => c.addEventListener('click', () => {
+    _typeFilter = c.dataset.type;
+    render(container, router);
+  }));
+  container.querySelectorAll('[data-knee]').forEach(c => c.addEventListener('click', () => {
+    _kneeOnly = !_kneeOnly;
+    render(container, router);
+  }));
+  container.querySelectorAll('[data-detail]').forEach(b => b.addEventListener('click', () =>
+    router.go('detail', b.dataset.detail)));
+}
+
+function sessionRow(s) {
+  const d = new Date(s.date + 'T00:00:00');
+  return `<div class="sess-row" data-detail="${esc(s.id)}">
+    <div class="when"><div class="d">${d.getDate()}</div><div class="m">${SL.months[d.getMonth()]}</div></div>
+    <div class="body">
+      <div class="ttl">${esc(s.type || '?')}</div>
+      <div class="meta">${s.exercises?.length||0} vaj · ${s.durationMin||'?'} min · RPE ${s.rpe||'?'}</div>
+    </div>
+    ${s.kneePain ? `<span class="badge knee${s.kneePain}">K ${s.kneePain}</span>` : ''}
+  </div>`;
+}
+
+__M["views/history.js"] = { render };
+}
+/* views/detail.js */
+{
+/* =====================================================================
+ * detail.js — view a saved session, optionally edit it.
+ *
+ * Modes: 'view' (default, read-only) | 'edit' (full editor on a copy).
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { esc, fmtDate, toast, confirm2 } = __M["lib/dom.js"];
+const { renderEditor } = __M["views/editor.js"];
+const { repeatFrom } = __M["views/active.js"];
+
+let _mode = 'view';
+let _editingCopy = null;
+
+function render(container, router, sessionId) {
+  const s = store.state.sessions.find(x => x.id === sessionId);
+  if (!s) { router.go('history'); return; }
+
+  if (_mode === 'edit' && _editingCopy && _editingCopy.id === sessionId) {
+    return renderEdit(container, router, sessionId);
+  }
+  _mode = 'view'; _editingCopy = null;
+  return renderView(container, router, s);
+}
+
+/* ----------------------------------------------------------------- view */
+
+function renderView(container, router, s) {
+  document.getElementById('title').textContent = s.type || 'Trening';
+  document.getElementById('subtitle').textContent = fmtDate(s.date);
+
+  let html = `<div class="card spread">
+    <div class="row wrap" style="gap:6px">
+      <span class="badge rpe">RPE ${s.rpe ?? '–'}</span>
+      <span class="badge rpe">${s.durationMin ?? '–'} min</span>
+      <span class="badge rpe">${s.exercises?.length||0} vaj</span>
+      ${s.kneePain ? `<span class="badge knee${s.kneePain}">Koleno ${s.kneePain}</span>` : ''}
+      ${s.bodyweight ? `<span class="badge rpe">${s.bodyweight}kg</span>` : ''}
+    </div>
+    <button class="btn ghost sm" data-edit>✎ Uredi</button>
+  </div>`;
+
+  for (const ex of (s.exercises || [])) {
+    const sets = ex.sets || [];
+    html += `<div class="ex-block">
+      <div style="font-weight:700;margin-bottom:6px">${esc(ex.name)}</div>
+      ${sets.length ? sets.map((st, i) => `
+        <div class="set-row" style="grid-template-columns:30px 1fr">
+          <div class="idx">${i+1}</div>
+          <div>${st.reps ?? '–'} × ${st.weight ?? '–'}${st.weight ? ' kg' : ''}</div>
+        </div>
+      `).join('') : '<div class="muted">brez serij</div>'}
+      ${ex.note ? `<div class="opomba muted" style="font-size:13px;margin-top:6px;font-style:italic">${esc(ex.note)}</div>` : ''}
+    </div>`;
+  }
+
+  if (s.comment) {
+    html += `<div class="card"><h2>Komentar</h2><div>${esc(s.comment)}</div></div>`;
+  }
+
+  html += `<div class="row" style="gap:8px;margin-bottom:20px">
+    <button class="btn ghost" data-repeat>↻ Ponovi</button>
+    <button class="btn danger" data-delete>Izbriši</button>
+  </div>`;
+
+  container.innerHTML = html;
+
+  container.querySelector('[data-edit]')?.addEventListener('click', () => {
+    _mode = 'edit';
+    _editingCopy = JSON.parse(JSON.stringify(s)); // deep clone
+    renderEdit(container, router, s.id);
+  });
+  container.querySelector('[data-repeat]')?.addEventListener('click', () => {
+    repeatFrom(s.id);
+    router.go('active');
+  });
+  container.querySelector('[data-delete]')?.addEventListener('click', () => {
+    if (!confirm2('Izbrišem ta trening?')) return;
+    store.update(state => {
+      state.sessions = state.sessions.filter(x => x.id !== s.id);
+    });
+    toast('Izbrisano');
+    router.go('history');
+  });
+}
+
+/* ----------------------------------------------------------------- edit */
+
+function renderEdit(container, router, sessionId) {
+  const copy = _editingCopy;
+  document.getElementById('title').textContent = 'Urejanje';
+  document.getElementById('subtitle').textContent = fmtDate(copy.date);
+
+  renderEditor(container, copy, {
+    allSessions: store.state.sessions,
+    saveLabel: 'Shrani spremembe',
+    restDefault: store.state.settings.restDefault,
+    timerSound: store.state.settings.timerSound,
+    timerHaptic: store.state.settings.timerHaptic,
+    prCelebrationOn: false, // don't celebrate during edit
+    onChange: () => { /* changes are local until Save */ },
+    onSave: () => {
+      // Drop empty sets / exercises like commit() does.
+      copy.exercises = copy.exercises
+        .map(e => ({ ...e, sets: e.sets.filter(st => st.reps !== '' || st.weight !== '') }))
+        .filter(e => e.name && e.name.trim());
+      copy.updatedAt = Date.now();
+      store.update(state => {
+        const i = state.sessions.findIndex(x => x.id === sessionId);
+        if (i >= 0) state.sessions[i] = copy;
+      });
+      _mode = 'view'; _editingCopy = null;
+      toast('Posodobljeno');
+      render(container, router, sessionId);
+    },
+    onCancel: () => {
+      if (!confirm2('Zavrži spremembe?')) return;
+      _mode = 'view'; _editingCopy = null;
+      render(container, router, sessionId);
+    },
+  });
+}
+
+__M["views/detail.js"] = { render };
+}
+/* views/progress.js */
+{
+/* =====================================================================
+ * progress.js — per-exercise charts: top weight, est. 1RM, weekly volume
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { esc, SL } = __M["lib/dom.js"];
+const { canonical } = __M["state/normalize.js"];
+const { estimate1RM, exerciseVolume } = __M["lib/onerm.js"];
+const { lineChart, barChart } = __M["lib/chart.js"];
+
+let _selCanonical = '';
+let _mode = 'top'; // 'top' | 'e1rm' | 'volume'
+
+function render(container, router) {
+  document.getElementById('title').textContent = 'Progres';
+  document.getElementById('subtitle').textContent = 'Razvoj po vajah';
+
+  const sessions = [...store.state.sessions].sort((a, b) => a.date.localeCompare(b.date));
+
+  // Build per-exercise data
+  const byEx = {};   // canonical → { name, points: [{date, weight, reps}] }
+  for (const s of sessions) {
+    for (const e of (s.exercises || [])) {
+      const c = e.canonical || canonical(e.name);
+      if (!c) continue;
+      const slot = byEx[c] || (byEx[c] = { name: e.name, points: [] });
+      slot.name = e.name; // keep most recent display name
+      let topW = 0, topReps = 0, vol = 0;
+      for (const x of (e.sets || [])) {
+        const w = Number(x.weight) || 0, r = Number(x.reps) || 0;
+        vol += w * r;
+        if (w > topW) { topW = w; topReps = r; }
+      }
+      slot.points.push({
+        date: s.date, weight: topW, reps: topReps,
+        e1rm: estimate1RM(topW, topReps) || 0,
+        volume: vol, rpe: s.rpe,
+      });
+    }
+  }
+  const names = Object.entries(byEx)
+    .filter(([, v]) => v.points.some(p => p.weight > 0 || p.volume > 0))
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+
+  if (!names.length) {
+    container.innerHTML = `<div class="card empty">Ni dovolj podatkov za graf.</div>`;
+    return;
+  }
+
+  if (!_selCanonical || !byEx[_selCanonical]) _selCanonical = names[0][0];
+  const data = byEx[_selCanonical].points;
+
+  let html = `<div class="card">
+    <div class="field">
+      <label>Vaja</label>
+      <select id="exSel">${names.map(([c, v]) =>
+        `<option value="${esc(c)}" ${c===_selCanonical?'selected':''}>${esc(v.name)}</option>`
+      ).join('')}</select>
+    </div>
+    <div class="chart-tabs">
+      <button data-mode="top" data-active="${_mode==='top'}">Top teža</button>
+      <button data-mode="e1rm" data-active="${_mode==='e1rm'}">Ocenjen 1RM</button>
+      <button data-mode="volume" data-active="${_mode==='volume'}">Volumen</button>
+    </div>
+  </div>`;
+
+  /* stats strip */
+  const last = data[data.length - 1] || {};
+  const prev = data[data.length - 2] || {};
+  const peakW = data.reduce((a, b) => b.weight > (a.weight||0) ? b : a, {});
+  const peakE = data.reduce((a, b) => b.e1rm > (a.e1rm||0) ? b : a, {});
+  const delta = (last.weight || 0) - (prev.weight || 0);
+
+  html += `<div class="stat-grid">
+    <div class="stat"><div class="v">${peakW.weight||'–'}<span style="font-size:12px">kg</span></div><div class="l">PR (teža)</div></div>
+    <div class="stat"><div class="v">${peakE.e1rm ? peakE.e1rm.toFixed(0) : '–'}<span style="font-size:12px">kg</span></div><div class="l">PR (1RM)</div></div>
+    <div class="stat"><div class="v" style="color:${delta>0?'var(--good)':delta<0?'var(--bad)':'var(--txt)'}">${delta>0?'+':''}${delta||0}</div><div class="l">vs prej</div></div>
+  </div>`;
+
+  /* chart */
+  let chartData;
+  if (_mode === 'top')        chartData = data.map(d => ({ x: d.date, y: d.weight }));
+  else if (_mode === 'e1rm')  chartData = data.map(d => ({ x: d.date, y: d.e1rm }));
+  else                        chartData = data.map(d => ({ x: d.date, y: d.volume }));
+  chartData = chartData.filter(d => d.y > 0);
+
+  html += `<div class="chart-wrap">${
+    _mode === 'volume' ? barChart(chartData) : lineChart(chartData)
+  }</div>`;
+
+  /* table */
+  html += `<div class="card"><h2>Zgodovina vaje</h2>`;
+  for (const d of [...data].reverse()) {
+    const isPR = d === peakW;
+    html += `<div class="sess-row" style="cursor:default">
+      <div class="when"><div class="d">${new Date(d.date).getDate()}</div>
+        <div class="m">${SL.months[new Date(d.date).getMonth()]}</div></div>
+      <div class="body">
+        <div class="ttl">${d.reps ?? '–'} × ${d.weight} kg</div>
+        <div class="meta">${d.date} · 1RM ≈ ${d.e1rm.toFixed(0)} · vol ${d.volume.toFixed(0)} · RPE ${d.rpe||'–'}</div>
+      </div>
+      ${isPR ? '<span class="badge pr">★ PR</span>' : ''}
+    </div>`;
+  }
+  html += `</div>`;
+
+  container.innerHTML = html;
+
+  container.querySelector('#exSel').addEventListener('change', e => {
+    _selCanonical = e.target.value;
+    render(container, router);
+  });
+  container.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+    _mode = b.dataset.mode;
+    render(container, router);
+  }));
+}
+
+__M["views/progress.js"] = { render };
+}
+/* views/settings.js */
+{
+/* =====================================================================
+ * settings.js — Gist token, sync controls, prefs, data import/export
+ *
+ * Rendered as a bottom-sheet modal (not a tab) so it stays out of the way.
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { KEYS, todayISO } = __M["state/schema.js"];
+const { esc, toast, confirm2, relTime } = __M["lib/dom.js"];
+
+let _sheet = null;
+
+function openSettings() {
+  close();
+  _sheet = document.createElement('div');
+  _sheet.className = 'sheet';
+  _sheet.addEventListener('click', e => { if (e.target === _sheet) close(); });
+  document.body.appendChild(_sheet);
+  rerender();
+}
+
+function close() { _sheet?.remove(); _sheet = null; }
+
+function rerender() {
+  if (!_sheet) return;
+  const st = store.state;
+  const sync = st.settings.sync || {};
+  const token = localStorage.getItem(KEYS.TOKEN) || '';
+  const tokenMask = token ? token.slice(0, 4) + '…' + token.slice(-4) : '';
+
+  _sheet.innerHTML = `<div class="panel">
+    <div class="set-section">
+      <h3>Sinhronizacija — GitHub Gist</h3>
+      <div class="set-help">
+        Trening shranjuje podatke v zaseben gist na tvojem GitHub računu.
+        Zato potrebuješ <b>Personal Access Token</b> z dovoljenjem <code>gist</code>.
+        <br><br>
+        <b>Kako:</b><br>
+        1. Pojdi na
+        <a href="https://github.com/settings/tokens/new?description=Trening%20app&scopes=gist" target="_blank" rel="noopener">
+        github.com/settings/tokens/new</a> (Classic)<br>
+        2. Označi samo <b>gist</b> scope, "Generate token"<br>
+        3. Kopiraj token (samo enkrat ga vidiš!) in ga prilepi tukaj
+      </div>
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input id="tokIn" type="password" autocomplete="off" placeholder="ghp_..." value="${esc(token)}">
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" id="tokSave">Shrani token</button>
+        <button class="btn ghost sm" id="tokTest">Preveri</button>
+        ${token ? `<button class="btn danger sm" id="tokClear">Pobriši</button>` : ''}
+      </div>
+      <div class="kv"><span class="k">Status</span><span class="v" id="syncStatus">${esc(syncDescribe(sync, token))}</span></div>
+      <div class="kv"><span class="k">Token</span><span class="v">${tokenMask || '—'}</span></div>
+      <div class="kv"><span class="k">Gist ID</span><span class="v">${esc(sync.gistId || '—')}</span></div>
+      <div class="kv"><span class="k">Zadnja sinhronizacija</span><span class="v">${relTime(sync.lastSyncedAt)}</span></div>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn ghost sm" id="syncPull">⤓ Potegni</button>
+        <button class="btn ghost sm" id="syncPush">⤒ Pošlji</button>
+      </div>
+    </div>
+
+    <div class="set-section">
+      <h3>Trening</h3>
+      <div class="field">
+        <label>Privzet počitek (sek)</label>
+        <input type="number" id="restDef" value="${st.settings.restDefault || 90}" min="0" step="5">
+      </div>
+      <div class="row" style="gap:14px;margin-top:6px">
+        <label class="row" style="gap:6px"><input type="checkbox" id="snd" ${st.settings.timerSound!==false?'checked':''}> Pisk</label>
+        <label class="row" style="gap:6px"><input type="checkbox" id="hap" ${st.settings.timerHaptic!==false?'checked':''}> Vibracija</label>
+      </div>
+    </div>
+
+    <div class="set-section">
+      <h3>Podatki</h3>
+      <button class="menu-item" id="exp">⤓ Izvozi vse v JSON</button>
+      <button class="menu-item" id="imp">⤒ Uvozi JSON (zamenja vse)</button>
+      <button class="menu-item" id="rst" style="color:#ff7070">✕ Pobriši vse</button>
+    </div>
+
+    <button class="btn ghost" id="closeBtn" style="margin-top:8px">Zapri</button>
+  </div>`;
+
+  bind();
+}
+
+function syncDescribe(sync, token) {
+  if (!token) return 'Brez tokena';
+  if (!sync.gistId) return 'Token OK, gist še ni ustvarjen';
+  return 'Aktivno';
+}
+
+function bind() {
+  const $ = sel => _sheet.querySelector(sel);
+  $('#closeBtn').onclick = close;
+
+  $('#tokSave').onclick = () => {
+    const v = $('#tokIn').value.trim();
+    localStorage.setItem(KEYS.TOKEN, v);
+    toast('Shranjeno');
+    rerender();
+    // trigger initial sync if newly added
+    store.pushNow().catch(e => toast('Push napaka: ' + e.message, 'err'));
+  };
+  $('#tokTest').onclick = async () => {
+    try {
+      const u = await store.sync.testToken();
+      toast('OK — ' + (u.login || 'auth velja'));
+    } catch (e) {
+      toast(e.message, 'err');
+    }
+  };
+  $('#tokClear')?.addEventListener('click', () => {
+    if (!confirm2('Pobrišem token?')) return;
+    localStorage.removeItem(KEYS.TOKEN);
+    rerender();
+    toast('Pobrisano');
+  });
+
+  $('#syncPull').onclick = async () => {
+    try {
+      const r = await store.pullNow();
+      toast(r ? 'Potegnjeno' : 'Nič novega');
+      rerender();
+    } catch (e) { toast('Napaka: ' + e.message, 'err'); }
+  };
+  $('#syncPush').onclick = async () => {
+    try {
+      await store.pushNow();
+      toast('Poslano');
+      rerender();
+    } catch (e) { toast('Napaka: ' + e.message, 'err'); }
+  };
+
+  $('#restDef').addEventListener('input', e => {
+    store.update(s => { s.settings.restDefault = +e.target.value || 0; });
+  });
+  $('#snd').addEventListener('change', e => {
+    store.update(s => { s.settings.timerSound = e.target.checked; });
+  });
+  $('#hap').addEventListener('change', e => {
+    store.update(s => { s.settings.timerHaptic = e.target.checked; });
+  });
+
+  $('#exp').onclick = () => {
+    const data = JSON.stringify(store.state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `trening-${todayISO()}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    toast('Izvoženo');
+  };
+  $('#imp').onclick = () => {
+    document.getElementById('fileIn').click();
+    close();
+  };
+  $('#rst').onclick = () => {
+    if (!confirm2('Pobrišem VSE podatke (lokalno)?')) return;
+    if (!confirm2('Resno?')) return;
+    store.replaceAll({ sessions: [], templates: {}, bodyweight: [] });
+    toast('Pobrisano');
+    close();
+  };
+}
+
+__M["views/settings.js"] = { openSettings };
+}
+/* main.js */
+{
+/* =====================================================================
+ * main.js — bootstrap, router, draft recovery, header sync indicator
+ * ===================================================================== */
+
+const { store } = __M["state/store.js"];
+const { GistAdapter } = __M["sync/gist.js"];
+const { mountTimerBar } = __M["lib/timer.js"];
+const { toast, fmtDate } = __M["lib/dom.js"];
+
+// views
+const home = __M["views/home.js"];
+const nv = __M["views/new.js"];
+const active = __M["views/active.js"];
+const history = __M["views/history.js"];
+const detail = __M["views/detail.js"];
+const progress = __M["views/progress.js"];
+const { openSettings } = __M["views/settings.js"];
+
+const SEED = {"sessions":[],"templates":{},"bodyweight":[]}
+;
+
+/* ========== router ========== */
+
+const router = {
+  view: 'home',
+  param: null,
+  go(view, param) {
+    this.view = view; this.param = param;
+    document.querySelectorAll('nav.tab a').forEach(a => {
+      const v = a.dataset.go;
+      a.dataset.active = (
+        view === v ||
+        (view === 'active' && v === 'new') ||
+        (view === 'detail' && v === 'history')
+      );
+    });
+    rerender();
+    window.scrollTo(0, 0);
+  },
+};
+
+const app = document.getElementById('app');
+
+function rerender() {
+  switch (router.view) {
+    case 'home': return home.render(app, router);
+    case 'new': return nv.render(app, router);
+    case 'active': return active.render(app, router);
+    case 'history': return history.render(app, router);
+    case 'detail': return detail.render(app, router, router.param);
+    case 'progress': return progress.render(app, router);
+  }
+}
+
+/* ========== draft recovery banner ========== */
+
+function updateDraftBanner() {
+  const el = document.getElementById('draftBanner');
+  const d = store.state.draft;
+  if (!d) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  // hide while actually editing the draft
+  if (router.view === 'active') { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const when = new Date(d.startedAt || Date.now()).toLocaleTimeString('sl-SI', { hour: '2-digit', minute: '2-digit' });
+  el.innerHTML = `
+    <div class="grow">📝 Nedokončan trening (${when}) — ${escapeHtml(d.type || 'brez tipa')}</div>
+    <button id="dResume">Nadaljuj</button>
+    <button id="dDiscard" style="background:rgba(0,0,0,.3)">×</button>`;
+  el.querySelector('#dResume').onclick = () => router.go('active');
+  el.querySelector('#dDiscard').onclick = () => {
+    if (!confirm('Zavrži osnutek?')) return;
+    store.update(s => { s.draft = null; });
+  };
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[<>&"']/g, c =>
+    ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ========== sync badge ========== */
+
+function updateSyncBadge() {
+  const b = document.getElementById('syncBadge');
+  b.className = 'sync-badge ' + (store.syncStatus || 'off');
+  b.title = ({
+    ok: 'Sinhronizirano',
+    syncing: 'Pošiljam…',
+    err: 'Napaka pri sinhronizaciji',
+    off: 'Brez sinhronizacije',
+  })[store.syncStatus] || '';
+}
+
+/* ========== bootstrap ========== */
+
+function init() {
+  // Initialize store with optional seed for first-run
+  store.init(SEED);
+
+  // Wire sync adapter
+  store.sync = new GistAdapter(() => store.state);
+  if (store.sync.isConfigured()) store.setSyncStatus('ok');
+  else store.setSyncStatus('off');
+
+  // Subscribe — re-render current view on data change
+  store.subscribe((state, kind) => {
+    if (kind === 'data') {
+      rerender();
+      updateDraftBanner();
+    } else if (kind === 'sync') {
+      updateSyncBadge();
+    }
+  });
+
+  // Mount the rest timer bar (always present, hidden when idle)
+  mountTimerBar();
+
+  // Tab nav
+  document.querySelectorAll('nav.tab a').forEach(a =>
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      router.go(a.dataset.go);
+    }));
+
+  // Header buttons
+  document.getElementById('menuBtn').addEventListener('click', openSettings);
+
+  // Import file picker
+  document.getElementById('fileIn').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const j = JSON.parse(r.result);
+        if (!j.sessions) throw new Error('Manjka "sessions"');
+        store.replaceAll(j);
+        toast('Uvoženo');
+        router.go('home');
+      } catch (err) { toast('Napaka pri uvozu: ' + err.message, 'err'); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+
+  // Initial pull if we have sync configured
+  if (store.sync.isConfigured() && store.state.settings.sync.gistId) {
+    store.pullNow().catch(e => console.warn('initial pull failed', e));
+  }
+
+  // First render
+  router.go('home');
+  updateDraftBanner();
+  updateSyncBadge();
+}
+
+init();
+
+__M["main.js"] = {  };
+}
+})();
+</script>
+</body>
+</html>
