@@ -1646,7 +1646,7 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
 
   /* exercise delete */
   container.querySelectorAll('[data-ex-del]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (!await confirm2('Izbriši vajo?')) return;
       const i = +btn.dataset.exDel;
       session.exercises.splice(i, 1);
