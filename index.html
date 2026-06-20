@@ -2,6 +2,7 @@
 <html lang="sl">
 <head>
 <meta charset="utf-8">
+<meta name="description" content="Trening — beležnik vadb za moč in napredek">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -285,6 +286,16 @@ nav.tab a[data-active="true"]{color:var(--accent)}
 .kv .k{color:var(--muted);font-size:13px}
 .kv .v{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 
+
+/* ----- confirm2 modal ----- */
+.c2-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fadeIn .15s ease}
+.c2-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:24px 20px;max-width:300px;width:100%;animation:slideUp .15s ease}
+.c2-msg{margin:0 0 18px;font-size:15px;line-height:1.5;text-align:center}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -312,6 +323,7 @@ nav.tab a[data-active="true"]{color:var(--accent)}
 
 <!-- main.js inlined by build -->
 <script>
+'use strict';
 (()=>{
 const __M = {};
 /* state/normalize.js */
@@ -668,8 +680,15 @@ class Store {
   }
 
   _persist() {
-    try { localStorage.setItem(KEYS.V2, JSON.stringify(this.state)); }
-    catch (e) { console.error('persist failed', e); }
+    try {
+      const data = JSON.stringify(this.state);
+      localStorage.setItem(KEYS.V2, data);
+    } catch (e) {
+      console.error('persist failed', e);
+      if (e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22)) {
+        toast('⚠️ Pomnilnik je poln — podatki niso shranjeni. Izvozi ali izbriši stare treninge.');
+      }
+    }
   }
 
   _scheduleSave() {
@@ -859,6 +878,10 @@ class GistAdapter {
       },
     });
     if (res.status === 401) throw new Error('Token zavrnjen (preveri scope=gist)');
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After') || '60';
+        throw new Error(`GitHub API omejitev (429). Počakaj ${retryAfter}s pred naslednjo sinhronizacijo.`);
+      }
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
       throw new Error(`GitHub ${res.status}: ${txt.slice(0, 200)}`);
@@ -944,6 +967,14 @@ function esc(s) {
   ));
 }
 
+/** Safely parse a numeric input. Returns '' for empty/invalid, clamps to [min,max]. */
+function safeNum(v, min = 0, max = 9999) {
+  if (v === '' || v === null || v === undefined) return '';
+  const n = Number(v);
+  if (!isFinite(n)) return '';
+  return n < min ? min : n > max ? max : n;
+}
+
 function el(html) {
   const t = document.createElement('template');
   t.innerHTML = html.trim();
@@ -964,8 +995,30 @@ function toast(msg, kind = '') {
 }
 
 function confirm2(msg) {
-  // Wrap window.confirm so we can swap for a custom modal later.
-  return window.confirm(msg);
+  // Promise-based modal instead of blocking window.confirm.
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'c2-overlay';
+    const box = document.createElement('div');
+    box.className = 'c2-box';
+    const p = document.createElement('p');
+    p.className = 'c2-msg';
+    p.textContent = msg;
+    const btns = document.createElement('div');
+    btns.className = 'row';
+    const no = document.createElement('button');
+    no.className = 'btn ghost'; no.style.flex = '1'; no.textContent = 'Prekliči';
+    const yes = document.createElement('button');
+    yes.className = 'btn danger'; yes.style.flex = '1'; yes.textContent = 'Potrdi';
+    btns.append(no, yes);
+    box.append(p, btns);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const cleanup = v => { document.body.removeChild(overlay); resolve(v); };
+    yes.onclick = () => cleanup(true);
+    no.onclick = () => cleanup(false);
+    overlay.addEventListener('click', e => { if (e.target === overlay) cleanup(false); });
+  });
 }
 
 /** Format minutes since timestamp as relative SI-style label. */
@@ -1559,7 +1612,7 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
 
   /* RPE */
   container.querySelectorAll('[data-rpe]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       session.rpe = +btn.dataset.rpe;
       touch();
       // visual feedback without full re-render
@@ -1594,7 +1647,7 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
   /* exercise delete */
   container.querySelectorAll('[data-ex-del]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (!confirm2('Izbriši vajo?')) return;
+      if (!await confirm2('Izbriši vajo?')) return;
       const i = +btn.dataset.exDel;
       session.exercises.splice(i, 1);
       touch();
@@ -1819,7 +1872,7 @@ function render(container, router) {
   });
 }
 
-function commit(router) {
+async function commit(router) {
   const d = store.state.draft;
   if (!d) return;
 
@@ -1835,7 +1888,7 @@ function commit(router) {
     .filter(e => e.name && e.name.trim());
 
   if (!d.exercises.length) {
-    if (!confirm2('Trening nima vaj. Vseeno shrani?')) return;
+    if (!await confirm2('Trening nima vaj. Vseeno shrani?')) return;
   }
 
   // Update bodyweight log if user filled it
@@ -1858,8 +1911,8 @@ function commit(router) {
   router.go('detail', d.id);
 }
 
-function cancel(router) {
-  if (!confirm2('Zavrži trening v teku? Podatki bodo izgubljeni.')) return;
+async function cancel(router) {
+  if (!await confirm2('Zavrži trening v teku? Podatki bodo izgubljeni.')) return;
   store.update(s => { s.draft = null; });
   router.go('home');
 }
@@ -2262,8 +2315,8 @@ function renderView(container, router, s) {
     repeatFrom(s.id);
     router.go('active');
   });
-  container.querySelector('[data-delete]')?.addEventListener('click', () => {
-    if (!confirm2('Izbrišem ta trening?')) return;
+  container.querySelector('[data-delete]')?.addEventListener('click', async () => {
+    if (!await confirm2('Izbrišem ta trening?')) return;
     store.update(state => {
       state.sessions = state.sessions.filter(x => x.id !== s.id);
     });
@@ -2301,8 +2354,8 @@ function renderEdit(container, router, sessionId) {
       toast('Posodobljeno');
       render(container, router, sessionId);
     },
-    onCancel: () => {
-      if (!confirm2('Zavrži spremembe?')) return;
+    onCancel: async () => {
+      if (!await confirm2('Zavrži spremembe?')) return;
       _mode = 'view'; _editingCopy = null;
       render(container, router, sessionId);
     },
@@ -2535,7 +2588,11 @@ function bind() {
 
   $('#tokSave').onclick = () => {
     const v = $('#tokIn').value.trim();
-    localStorage.setItem(KEYS.TOKEN, v);
+          if (v && !v.startsWith('ghp_') && !v.startsWith('github_pat_')) {
+        toast('⚠️ Token mora začeti z ghp_ ali github_pat_', 'err');
+        return;
+      }
+      localStorage.setItem(KEYS.TOKEN, v);
     toast('Shranjeno');
     rerender();
     // trigger initial sync if newly added
@@ -2549,8 +2606,8 @@ function bind() {
       toast(e.message, 'err');
     }
   };
-  $('#tokClear')?.addEventListener('click', () => {
-    if (!confirm2('Pobrišem token?')) return;
+  $('#tokClear')?.addEventListener('click', async () => {
+    if (!await confirm2('Pobrišem token?')) return;
     localStorage.removeItem(KEYS.TOKEN);
     rerender();
     toast('Pobrisano');
@@ -2594,9 +2651,9 @@ function bind() {
     document.getElementById('fileIn').click();
     close();
   };
-  $('#rst').onclick = () => {
-    if (!confirm2('Pobrišem VSE podatke (lokalno)?')) return;
-    if (!confirm2('Resno?')) return;
+  $('#rst').onclick = async () => {
+    if (!await confirm2('Pobrišem VSE podatke (lokalno)?')) return;
+    if (!await confirm2('Resno?')) return;
     store.replaceAll({ sessions: [], templates: {}, bodyweight: [] });
     toast('Pobrisano');
     close();
