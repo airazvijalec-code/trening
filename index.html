@@ -37,7 +37,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
   font:15px/1.45 -apple-system,BlinkMacSystemFont,system-ui,Segoe UI,Roboto,sans-serif;
-  overscroll-behavior-y:contain;-webkit-text-size-adjust:100%}
+  overscroll-behavior-y:contain;overflow-x:hidden;-webkit-text-size-adjust:100%}
 body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh}
 button{font:inherit;color:inherit}
 input,select,textarea{font:inherit;color:var(--txt);background:var(--panel2);
@@ -46,7 +46,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent)}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-textarea{resize:vertical;min-height:60px;width:100%}
+textarea{resize:vertical;min-height:36px;width:100%}
 
 /* ----- Header ----- */
 header.app{position:sticky;top:0;background:rgba(11,13,16,.85);
@@ -161,7 +161,7 @@ main{max-width:560px;margin:0 auto;padding:16px}
 
 .set-add{display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap}
 .opomba{margin-top:8px}
-.opomba textarea{font-size:13px;min-height:42px}
+.opomba textarea{font-size:13px;min-height:36px}
 
 /* autocomplete dropdown */
 .ac-list{position:absolute;top:100%;left:0;right:30px;background:var(--panel3);
