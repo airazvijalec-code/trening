@@ -38,7 +38,7 @@
 html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
   font:15px/1.45 -apple-system,BlinkMacSystemFont,system-ui,Segoe UI,Roboto,sans-serif;
   overscroll-behavior-y:contain;overflow-x:hidden;-webkit-text-size-adjust:100%}
-body{padding-bottom:calc(72px + env(safe-area-inset-bottom));min-height:100vh}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom));min-height:100vh}
 button{font:inherit;color:inherit}
 input,select,textarea{font:inherit;color:var(--txt);background:var(--panel2);
   border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
@@ -144,7 +144,7 @@ main{max-width:560px;margin:0 auto;padding:16px}
 .ex-block .ex-hint{color:var(--muted);font-size:11px;margin-top:-4px;margin-bottom:6px}
 
 /* set rows */
-.set-row{display:grid;grid-template-columns:30px 56px 56px 36px 36px;gap:6px;
+.set-row{display:grid;grid-template-columns:28px 1fr 1fr 38px 38px;gap:6px;
   align-items:center;margin-bottom:6px}
 .set-row.head{margin-bottom:4px}
 .set-row.head div{color:var(--muted);font-size:10px;text-align:center;
@@ -1579,9 +1579,9 @@ function render(container, session, candidates, prIdx, opts, onChange) {
   </div>`;
 
   /* save / cancel */
-  html += `<div class="row" style="gap:8px;margin-bottom:20px">
-    <button class="btn danger" style="flex:0 0 auto" data-cancel>Prekliči</button>
+  html += `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
     <button class="btn success" data-save>${esc(opts.saveLabel || 'Shrani')}</button>
+    <button class="btn ghost" data-cancel>Prekliči</button>
   </div>`;
 
   container.innerHTML = html;
