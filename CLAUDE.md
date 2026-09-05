@@ -11,7 +11,7 @@ Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` 
 | Modul | Odgovornost |
 |---|---|
 | `state/normalize.js` | kanonična imena vaj (lowercase, brez šumnikov), Levenshtein fuzzy match |
-| `state/schema.js` | schema v3, migracije, `uid()`, kardio helperji (`isCardio`, `setHasData`, `cardioKm`), vgrajene PPL predloge (6-dnevni split, vsak dan s kardio vrstico) |
+| `state/schema.js` | schema v4 (v4 = enkratna združitev starih imen vaj prek `LEGACY_NAME_MAP`), migracije, `uid()`, kardio helperji (`isCardio`, `setHasData`, `cardioKm`), vgrajene PPL predloge (6-dnevni split, vsak dan s kardio vrstico) |
 | `state/store.js` | `Store` — edini vir resnice; autosave v localStorage (300 ms debounce); sync scheduling (2 s); `mergeStates` (last-write-wins po seji) |
 | `sync/gist.js` | backup v zaseben GitHub Gist (PAT s scope `gist`, datoteka `trening.json`) |
 | `lib/dom.js` | `esc`, `toast`, `confirm2`, `debounce`, datumi sl-SI |
@@ -22,9 +22,9 @@ Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` 
 | `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()`, registracija SW |
 | `sw.js` (ločena datoteka) | offline: aplikacija cache-first + osvežitev v ozadju, GitHub API samo mreža, Google Fonts cache-first; cache `trening-v1` — `VERSION` dvigni, ko spremeniš `APP_SHELL` |
 
-## Podatkovni model (v3)
+## Podatkovni model (v4)
 
-- localStorage: `trening_data_v2` (stanje; ime ključa ostaja, polje `version` je 3), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira).
+- localStorage: `trening_data_v2` (stanje; ime ključa ostaja, polje `version` je 4), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira).
 - `state = { version, sessions[], templates{}, bodyweight[], draft, settings, updatedAt }`
 - `session = { id, date, type, durationMin, rpe, bodyweight, exercises[], comment, startedAt, createdAt, updatedAt }`
 - `exercise = { id, name, canonical, kind, note, targetReps, sets[] }`; `kind` je `'strength'` (privzeto, manjkajoč = strength) ali `'cardio'`

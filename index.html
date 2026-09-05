@@ -456,15 +456,20 @@ __M["state/normalize.js"] = { canonical, lev, fuzzyMatch, matchTier };
  *      names. Touch-stamp every record with createdAt/updatedAt for
  *      conflict resolution.
  *
- * v3 (current): exercise.kind = 'strength' | 'cardio'. Cardio "sets" are
+ * v3: exercise.kind = 'strength' | 'cardio'. Cardio "sets" are
  *      intervals: { durationMin, speed, incline, distanceKm, done }.
  *      Missing kind is treated as 'strength' everywhere, so v2 blobs
  *      (e.g. from an older gist) remain readable without migration.
+ *
+ * v4 (current): no shape change — a one-off data merge. Legacy exercise
+ *      names from the pre-PPL split (LEGACY_NAME_MAP) are renamed to the
+ *      current program's names so history/PRs/charts continue under one
+ *      name. Idempotent; also applied to states pulled from the gist.
  * ===================================================================== */
 
 const { canonical } = __M["state/normalize.js"];
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 /** Storage keys */
 const KEYS = {
@@ -584,6 +589,73 @@ function newSet() {
   };
 }
 
+/* ---------------------------------------------------------------------
+ * v4: legacy exercise names → current program names (canonical → display).
+ * Agreed with the user on 2026-09-05. Names not listed stay as they are.
+ * ------------------------------------------------------------------- */
+const LEGACY_NAME_MAP = {
+  'biceps klop': 'Preacher Curl (EZ Bar)',
+  'z sipka': 'EZ Bar Curl',
+  'z sipka biceps': 'EZ Bar Curl',
+  'ez bar biceps curl': 'EZ Bar Curl',
+  'cekic': 'Hammer Curl (Dumbbell)',
+  'rame letenje bucke': 'Lateral Raise (Dumbbell)',
+  'facepull': 'Face Pull',
+  'revers hyper': 'Reverse Hyper',
+  'revers hyper extension': 'Reverse Hyper',
+  'triceps extension kabli': 'Triceps Extension (Cable)',
+  'triceps spaga': 'Triceps Extension (Cable)',
+  'triceps extension dumbbell': 'Overhead Triceps Extension (Cable)',
+  'pull lat': 'Lat Pulldown (Cable)',
+  'uski': 'Lat Pulldown (Cable)',
+  'donji': 'Seated Cable Row',
+  'vesla': 'Bent Over Row (Barbell)',
+  'hiperextension': 'Back Extension',
+  'trapez': 'Shrug (Dumbbell)',
+  'leg press': 'Leg Press (Machine)',
+  'leg pres notraj': 'Leg Press (Machine)',
+  'leg pres zunaj': 'Leg Press (Machine)',
+  'leg pres siroko': 'Leg Press (Machine)',
+  'leg pres ozko': 'Leg Press (Machine)',
+  'vmo x10 2 vaji': 'Leg Press (Machine)',
+  'zadnja loza': 'Lying Leg Curl (Machine)',
+  'sprednja loza': 'Leg Extension (Machine)',
+  'extenz kvader': 'Leg Extension (Machine)',
+  'pocep': 'Squat (Barbell)',
+  'list': 'Seated Calf Raise',
+  'prsa kosi smith': 'Bench Press (Barbell)',
+  'prsa blagi bucke': 'Incline Bench Press (Dumbbell)',
+  'chest fly bucke': 'Low Cable Fly Crossovers',
+  'chest fly klopca kabli': 'Low Cable Fly Crossovers',
+  'prsa kabli na gor': 'Low Cable Fly Crossovers',
+  'prsa butterfly klopca': 'Low Cable Fly Crossovers',
+  'seated chest front fly': 'Low Cable Fly Crossovers',
+  'potisk sprednje rame': 'Shoulder Press (Dumbbell)',
+  'potisk sprednje rame klopca': 'Seated Shoulder Press (Machine)',
+};
+
+/** Apply LEGACY_NAME_MAP to a whole state. Returns number of sessions touched. */
+function renameLegacyExercises(state) {
+  if (!state) return 0;
+  const now = Date.now();
+  let n = 0;
+  const fix = e => {
+    const to = LEGACY_NAME_MAP[e.canonical || canonical(e.name)];
+    if (!to) return false;
+    e.name = to; e.canonical = canonical(to); return true;
+  };
+  for (const s of (state.sessions || [])) {
+    let hit = false;
+    for (const e of (s.exercises || [])) hit = fix(e) || hit;
+    if (hit) { s.updatedAt = now; n++; } // so sync pushes the renamed session
+  }
+  if (state.draft) for (const e of (state.draft.exercises || [])) fix(e);
+  for (const k of Object.keys(state.templates || {})) {
+    state.templates[k] = (state.templates[k] || []).map(nm => LEGACY_NAME_MAP[canonical(nm)] || nm);
+  }
+  return n;
+}
+
 /** Normalize a session: ensure all sub-records have ids and canonical names. */
 function normalizeSession(s) {
   s.id ||= uid('s_');
@@ -614,7 +686,8 @@ function migrate(raw) {
     out.sessions = (raw.sessions || []).map(s => normalizeSession({ ...s }));
     out.templates = raw.templates || {};
     out.updatedAt = Date.now();
-    return out;
+    out.version = 2;
+    raw = out; // fall through to the v2 → v3 → v4 steps below
   }
 
   // v2 → v3: stamp exercise.kind (idempotent; normalizeSession defaults to 'strength').
@@ -622,13 +695,19 @@ function migrate(raw) {
     raw.sessions = (raw.sessions || []).map(s => normalizeSession(s));
     if (raw.draft) normalizeSession(raw.draft);
     raw.version = 3;
-    return raw;
   }
 
-  if (raw.version === 3) return raw;
+  // v3 → v4: merge legacy exercise names into the current program's names.
+  if (raw.version === 3) {
+    const n = renameLegacyExercises(raw);
+    if (n) console.info(`v4: preimenovane vaje v ${n} sejah`);
+    raw.version = 4;
+  }
+
+  if (raw.version === 4) return raw;
 
   // future versions go here
-  console.warn('Unknown schema version', raw.version, '— treating as v3');
+  console.warn('Unknown schema version', raw.version, '— treating as v4');
   return raw;
 }
 
@@ -724,7 +803,7 @@ function sessionFromTemplate(def) {
   return s;
 }
 
-__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_TEMPLATES, sessionFromTemplate };
+__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_TEMPLATES, sessionFromTemplate, LEGACY_NAME_MAP, renameLegacyExercises };
 }
 /* state/store.js */
 {
@@ -732,7 +811,7 @@ __M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, ne
  * store.js — single source of truth + autosave + change bus
  * ===================================================================== */
 
-const { KEYS, SCHEMA_VERSION, emptyState, loadOrMigrate, normalizeSession } = __M["state/schema.js"];
+const { KEYS, SCHEMA_VERSION, emptyState, loadOrMigrate, normalizeSession, migrate, renameLegacyExercises } = __M["state/schema.js"];
 const { canonical } = __M["state/normalize.js"];
 
 class Store {
@@ -841,6 +920,7 @@ class Store {
     try {
       const remote = await this.sync.pull();
       if (!remote) { this.setSyncStatus('ok'); return null; }
+      renameLegacyExercises(remote); // an older gist may still carry pre-v4 names
       this.state = mergeStates(this.state, remote);
       this.state.settings.sync.lastSyncedAt = Date.now();
       this._persist();
@@ -863,7 +943,9 @@ class Store {
   }
 
   replaceAll(next) {
-    this.state = { ...emptyState(), ...next, version: SCHEMA_VERSION };
+    // Imported files may be any older version — run the same migrations as on load.
+    const migrated = migrate({ ...emptyState(), ...next });
+    this.state = { ...emptyState(), ...migrated, version: SCHEMA_VERSION };
     this.state.sessions = (this.state.sessions || []).map(normalizeSession);
     this._persist();
     this._scheduleSync();
