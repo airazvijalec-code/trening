@@ -116,6 +116,11 @@ main{max-width:560px;margin:0 auto;padding:16px}
 .tpl-card:active{border-color:var(--accent)}
 .tpl-card h3{margin:0 0 4px;font-size:14px}
 .tpl-card .ex-count{color:var(--muted);font-size:12px}
+.tpl-wrap{position:relative;display:flex}
+.tpl-wrap .tpl-card{flex:1;padding-right:36px}
+.tpl-x{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;
+  background:transparent;border:0;color:var(--dim);font-size:18px;line-height:1;cursor:pointer}
+.tpl-x:active{color:var(--bad)}
 
 /* ----- Session list ----- */
 .sess-row{display:flex;align-items:center;gap:12px;padding:12px 0;
@@ -2224,7 +2229,7 @@ __M["views/home.js"] = { render };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
-const { esc, fmtDate } = __M["lib/dom.js"];
+const { esc, fmtDate, toast, confirm2 } = __M["lib/dom.js"];
 const { BUILTIN_TEMPLATES } = __M["state/schema.js"];
 const { startNew, startFromTemplate, repeatFrom } = __M["views/active.js"];
 
@@ -2255,10 +2260,13 @@ function render(container, router) {
   if (userKeys.length) {
     html += `<div class="card"><h2>Moje predloge</h2><div class="tpl-grid">`;
     for (const k of userKeys) {
-      html += `<button class="tpl-card" data-tpl="${esc(k)}">
-        <h3>${esc(k)}</h3>
-        <div class="ex-count">${tpls[k].length} vaj</div>
-      </button>`;
+      html += `<div class="tpl-wrap">
+        <button class="tpl-card" data-tpl="${esc(k)}">
+          <h3>${esc(k)}</h3>
+          <div class="ex-count">${tpls[k].length} vaj</div>
+        </button>
+        <button class="tpl-x" data-tpl-del="${esc(k)}" title="Izbriši predlogo">×</button>
+      </div>`;
     }
     html += `</div></div>`;
   }
@@ -2304,6 +2312,15 @@ function render(container, router) {
     btn.addEventListener('click', () => {
       repeatFrom(btn.dataset.repeat);
       router.go('active');
+    }));
+  /* delete a user template (sessions stay untouched) */
+  container.querySelectorAll('[data-tpl-del]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const k = btn.dataset.tplDel;
+      if (!await confirm2(`Izbrišem predlogo »${k}«? Treningi v zgodovini ostanejo.`)) return;
+      store.update(s => { delete s.templates[k]; });
+      toast('Predloga izbrisana');
+      render(container, router);
     }));
 }
 
