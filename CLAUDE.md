@@ -10,7 +10,7 @@ Cela aplikacija je **ena datoteka: `index.html`** (~2900 vrstic) — vanilla JS,
 | Modul | Odgovornost |
 |---|---|
 | `state/normalize.js` | kanonična imena vaj (lowercase, brez šumnikov), Levenshtein fuzzy match |
-| `state/schema.js` | schema v2, migracije, `uid()`, vgrajene PPL predloge (6-dnevni split) |
+| `state/schema.js` | schema v3, migracije, `uid()`, kardio helperji (`isCardio`, `setHasData`, `cardioKm`), vgrajene PPL predloge (6-dnevni split, vsak dan s kardio vrstico) |
 | `state/store.js` | `Store` — edini vir resnice; autosave v localStorage (300 ms debounce); sync scheduling (2 s); `mergeStates` (last-write-wins po seji) |
 | `sync/gist.js` | backup v zaseben GitHub Gist (PAT s scope `gist`, datoteka `trening.json`) |
 | `lib/dom.js` | `esc`, `toast`, `confirm2`, `debounce`, datumi sl-SI |
@@ -20,12 +20,13 @@ Cela aplikacija je **ena datoteka: `index.html`** (~2900 vrstic) — vanilla JS,
 | `views/*` | home, new, active (editor seje), history, detail, progress, report, settings, pr_flash |
 | `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()` |
 
-## Podatkovni model (v2)
+## Podatkovni model (v3)
 
-- localStorage: `trening_data_v2` (stanje), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira).
+- localStorage: `trening_data_v2` (stanje; ime ključa ostaja, polje `version` je 3), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira).
 - `state = { version, sessions[], templates{}, bodyweight[], draft, settings, updatedAt }`
 - `session = { id, date, type, durationMin, rpe, bodyweight, exercises[], comment, startedAt, createdAt, updatedAt }`
-- `exercise = { id, name, canonical, note, targetReps, sets[] }`, `set = { id, reps, weight, done, restSec }`
+- `exercise = { id, name, canonical, kind, note, targetReps, sets[] }`; `kind` je `'strength'` (privzeto, manjkajoč = strength) ali `'cardio'`
+- moč: `set = { id, reps, weight, done, restSec }`; kardio: `set = { id, durationMin, speed, incline, distanceKm, done }` (km je lahko prazen → izračun hitrost × čas)
 
 ## Železna pravila
 

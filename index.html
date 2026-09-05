@@ -152,6 +152,10 @@ main{max-width:560px;margin:0 auto;padding:16px}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .set-row input::placeholder{color:var(--ghost);opacity:1;font-weight:600}
 .set-row.head{margin-bottom:4px}
+.set-row.cardio{grid-template-columns:22px 1fr 1fr 1fr 1fr 34px 26px}
+.set-row.cardio input{font-size:14px;padding:6px 0}
+.ex-block.cardio{border-left:3px solid var(--good)}
+.kind-tag{font-size:10px;font-weight:800;color:var(--good);border:1px solid var(--good);border-radius:6px;padding:1px 5px;letter-spacing:.04em;flex:none}
 .set-row.head div{color:var(--muted);font-size:10px;text-align:center;
   text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .set-row .idx{color:var(--muted);font-size:12px;text-align:center;font-weight:700}
@@ -414,15 +418,20 @@ __M["state/normalize.js"] = { canonical, lev, fuzzyMatch };
  *                  comment}]
  *      templates: { typeName: [exerciseNames] }
  *
- * v2 (current): adds stable IDs to exercises/sets, draft slot for active
+ * v2: adds stable IDs to exercises/sets, draft slot for active
  *      session, settings (sync), bodyweight log, normalized exercise
  *      names. Touch-stamp every record with createdAt/updatedAt for
  *      conflict resolution.
+ *
+ * v3 (current): exercise.kind = 'strength' | 'cardio'. Cardio "sets" are
+ *      intervals: { durationMin, speed, incline, distanceKm, done }.
+ *      Missing kind is treated as 'strength' everywhere, so v2 blobs
+ *      (e.g. from an older gist) remain readable without migration.
  * ===================================================================== */
 
 const { canonical } = __M["state/normalize.js"];
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /** Storage keys */
 const KEYS = {
@@ -478,19 +487,58 @@ function newExercise(name = '') {
     id: uid('e_'),
     name,
     canonical: canonical(name),
+    kind: 'strength',
     note: '',
     targetReps: '',
     sets: [newSet()],
   };
 }
 
-/** Build an exercise with a target rep range and a fixed number of empty sets. */
-function newExerciseFromTemplate(name, setCount = 1, targetReps = '') {
+/** Cardio exercise: sets are intervals (min · km/h · % · km). */
+function newCardioExercise(name = '') {
   const ex = newExercise(name);
+  ex.kind = 'cardio';
+  ex.sets = [newCardioSet()];
+  return ex;
+}
+
+/** Build an exercise with a target rep range and a fixed number of empty sets. */
+function newExerciseFromTemplate(name, setCount = 1, targetReps = '', kind = 'strength') {
+  const ex = kind === 'cardio' ? newCardioExercise(name) : newExercise(name);
   ex.targetReps = targetReps || '';
   const n = Math.max(1, setCount | 0);
-  ex.sets = Array.from({ length: n }, () => newSet());
+  ex.sets = Array.from({ length: n }, () => kind === 'cardio' ? newCardioSet() : newSet());
   return ex;
+}
+
+function newCardioSet() {
+  return {
+    id: uid('x_'),
+    durationMin: '',
+    speed: '',       // km/h
+    incline: '',     // %
+    distanceKm: '',  // optional; if empty, derived from speed × time
+    done: false,
+  };
+}
+
+function isCardio(ex) { return !!ex && ex.kind === 'cardio'; }
+
+/** True if the user typed anything into this set (kind-aware). */
+function setHasData(ex, st) {
+  if (!st) return false;
+  const has = v => v !== '' && v != null;
+  if (isCardio(ex)) return has(st.durationMin) || has(st.speed) || has(st.incline) || has(st.distanceKm);
+  return has(st.reps) || has(st.weight);
+}
+
+/** Distance in km for a cardio set: explicit, or derived from speed × time. */
+function cardioKm(st) {
+  if (!st) return 0;
+  const d = Number(st.distanceKm);
+  if (st.distanceKm !== '' && st.distanceKm != null && d >= 0) return d;
+  const v = Number(st.speed) || 0, m = Number(st.durationMin) || 0;
+  return v > 0 && m > 0 ? v * m / 60 : 0;
 }
 
 function newSet() {
@@ -511,6 +559,7 @@ function normalizeSession(s) {
   s.exercises = (s.exercises || []).map(e => {
     e.id ||= uid('e_');
     e.canonical = canonical(e.name);
+    e.kind = e.kind === 'cardio' ? 'cardio' : 'strength';
     if (typeof e.targetReps !== 'string') e.targetReps = '';
     e.sets = (e.sets || []).map(x => {
       x.id ||= uid('x_');
@@ -535,10 +584,18 @@ function migrate(raw) {
     return out;
   }
 
-  if (raw.version === 2) return raw;
+  // v2 → v3: stamp exercise.kind (idempotent; normalizeSession defaults to 'strength').
+  if (raw.version === 2) {
+    raw.sessions = (raw.sessions || []).map(s => normalizeSession(s));
+    if (raw.draft) normalizeSession(raw.draft);
+    raw.version = 3;
+    return raw;
+  }
+
+  if (raw.version === 3) return raw;
 
   // future versions go here
-  console.warn('Unknown schema version', raw.version, '— treating as v2');
+  console.warn('Unknown schema version', raw.version, '— treating as v3');
   return raw;
 }
 
@@ -568,7 +625,8 @@ function todayISO() {
 
 /* =====================================================================
  * Built-in workout templates — 6-Day Push/Pull/Legs split.
- * Each exercise: [name, setCount, repRange]. repRange is a display hint.
+ * Each exercise: [name, setCount, repRange, kind?]. repRange is a display
+ * hint; kind 'cardio' makes the entry a cardio block (min · km/h · % · km).
  * These live in code (not state) so they always appear and never get
  * flattened by the auto-save-on-commit logic.
  * ===================================================================== */
@@ -579,6 +637,7 @@ const BUILTIN_TEMPLATES = [
     ['Low Cable Fly Crossovers', 3, '12-15'],
     ['Lateral Raise (Dumbbell)', 3, '12-15'],
     ['Triceps Extension (Cable)', 3, '10-12'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
   { name: 'Pull 1', group: 'Pull', exercises: [
     ['Pull Up', 3, '5-10'],
@@ -587,6 +646,7 @@ const BUILTIN_TEMPLATES = [
     ['Face Pull', 3, '15-20'],
     ['Preacher Curl (EZ Bar)', 3, '8-12'],
     ['Hammer Curl (Dumbbell)', 2, '10-12'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
   { name: 'Legs 1', group: 'Legs', exercises: [
     ['Squat (Barbell)', 4, '6-10'],
@@ -594,6 +654,7 @@ const BUILTIN_TEMPLATES = [
     ['Lying Leg Curl (Machine)', 3, '10-15'],
     ['Standing Calf Raise (Smith)', 3, '10-15'],
     ['Cable Crunch', 3, '12-15'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
   { name: 'Push 2', group: 'Push', exercises: [
     ['Incline Bench Press (Dumbbell)', 4, '8-10'],
@@ -601,6 +662,7 @@ const BUILTIN_TEMPLATES = [
     ['Lateral Raise (Cable)', 3, '12-15'],
     ['Overhead Triceps Extension (Cable)', 3, '10-12'],
     ['Push Up', 2, 'max'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
   { name: 'Pull 2', group: 'Pull', exercises: [
     ['Bent Over Row (Barbell)', 4, '6-10'],
@@ -609,6 +671,7 @@ const BUILTIN_TEMPLATES = [
     ['Back Extension', 3, '10-12'],
     ['EZ Bar Curl', 3, '8-12'],
     ['Incline Dumbbell Curl', 3, '10-15'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
   { name: 'Legs 2', group: 'Legs', exercises: [
     ['Leg Press (Machine)', 4, '8-12'],
@@ -616,18 +679,19 @@ const BUILTIN_TEMPLATES = [
     ['Leg Extension (Machine)', 3, '12-15'],
     ['Seated Calf Raise', 3, '15-25'],
     ['Cable Crunch', 3, '12-15'],
+    ['Treadmill (Incline Walk)', 1, '15-30 min · 18 % · 3.5-4 km/h', 'cardio'],
   ]},
 ];
 
 /** Build a fresh draft session from a built-in template definition. */
 function sessionFromTemplate(def) {
   const s = newSession({ type: def.name });
-  s.exercises = def.exercises.map(([nm, sets, rep]) =>
-    newExerciseFromTemplate(nm, sets, rep));
+  s.exercises = def.exercises.map(([nm, sets, rep, kind]) =>
+    newExerciseFromTemplate(nm, sets, rep, kind));
   return s;
 }
 
-__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newExerciseFromTemplate, newSet, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_TEMPLATES, sessionFromTemplate };
+__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_TEMPLATES, sessionFromTemplate };
 }
 /* state/store.js */
 {
@@ -1044,7 +1108,23 @@ function fmtDate(s) {
 }
 const SL = { months: SL_MONTHS, days: SL_DAYS };
 
-__M["lib/dom.js"] = { $, $$, esc, el, debounce, toast, confirm2, relTime, fmtDate, SL };
+/** One cardio interval as text: "30 min · 4 km/h · 18 % · 2 km" (≈ when derived). */
+function fmtCardioSet(st) {
+  if (!st) return '–';
+  const has = v => v !== '' && v != null;
+  const parts = [];
+  if (has(st.durationMin)) parts.push(`${st.durationMin} min`);
+  if (has(st.speed)) parts.push(`${st.speed} km/h`);
+  if (has(st.incline)) parts.push(`${st.incline} %`);
+  if (has(st.distanceKm)) parts.push(`${st.distanceKm} km`);
+  else if (has(st.speed) && has(st.durationMin)) {
+    const km = (Number(st.speed) || 0) * (Number(st.durationMin) || 0) / 60;
+    if (km > 0) parts.push(`≈ ${km.toFixed(1)} km`);
+  }
+  return parts.length ? parts.join(' · ') : '–';
+}
+
+__M["lib/dom.js"] = { $, $$, esc, el, debounce, toast, confirm2, relTime, fmtDate, fmtCardioSet, SL };
 }
 /* lib/onerm.js */
 {
@@ -1198,9 +1278,12 @@ function buildCandidates(sessions) {
     for (const e of (s.exercises || [])) {
       const c = e.canonical || canonical(e.name);
       if (!c) continue;
-      const cur = map.get(c) || { name: e.name, canonical: c, count: 0, lastUsed: '' };
+      const cur = map.get(c) || { name: e.name, canonical: c, kind: 'strength', count: 0, lastUsed: '' };
       cur.count++;
-      if (s.date > cur.lastUsed) { cur.lastUsed = s.date; cur.name = e.name; } // most recent display
+      if (s.date > cur.lastUsed) { // most recent display name + kind
+        cur.lastUsed = s.date; cur.name = e.name;
+        cur.kind = e.kind === 'cardio' ? 'cardio' : 'strength';
+      }
       map.set(c, cur);
     }
   }
@@ -1269,6 +1352,7 @@ function buildPRIndex(sessions, excludeSessionId = null) {
   for (const s of sessions) {
     if (s.id === excludeSessionId) continue;
     for (const e of (s.exercises || [])) {
+      if (e.kind === 'cardio') continue; // no kg/reps to rank
       const c = e.canonical || canonical(e.name);
       const cur = idx[c] || { weight: 0, reps: 0, e1rm: 0, exampleName: e.name };
       for (const x of (e.sets || [])) {
@@ -1469,8 +1553,8 @@ __M["views/pr_flash.js"] = { celebratePR };
  * via the provided onChange callback, and returns HTML + binding fn.
  * ===================================================================== */
 
-const { esc, toast, confirm2, debounce } = __M["lib/dom.js"];
-const { newExercise, newSet } = __M["state/schema.js"];
+const { esc, toast, confirm2, debounce, fmtCardioSet } = __M["lib/dom.js"];
+const { newExercise, newCardioExercise, newSet, newCardioSet, isCardio, setHasData, cardioKm } = __M["state/schema.js"];
 const { canonical } = __M["state/normalize.js"];
 const { attachAutocomplete, buildCandidates } = __M["lib/autocomplete.js"];
 const { timer } = __M["lib/timer.js"];
@@ -1526,6 +1610,7 @@ function render(container, session, candidates, prIdx, opts, onChange) {
 
   /* exercises */
   session.exercises.forEach((ex, i) => {
+    if (isCardio(ex)) { html += renderCardioBlock(ex, i, session, opts); return; }
     const prevSets = lastSetsFor(ex.name, opts.allSessions || [], session.id);
     const lastTop = lastDoneTopFor(ex.name, opts.allSessions || [], session.id);
     const c = canonical(ex.name);
@@ -1571,11 +1656,14 @@ function render(container, session, candidates, prIdx, opts, onChange) {
     </div>`;
   });
 
-  html += `<button class="btn ghost" data-add-ex style="margin-bottom:10px">＋ Dodaj vajo</button>`;
+  html += `<div class="grid2" style="margin-bottom:10px">
+    <button class="btn ghost" data-add-ex>＋ Dodaj vajo</button>
+    <button class="btn ghost" data-add-cardio>＋ Kardio</button>
+  </div>`;
 
   html += `<div class="card">
-    <h2>Komentar (kardio, splošno)</h2>
-    <textarea data-bind="comment" placeholder="npr. Kardio 2km, 18 incline, hitrost 3.5">${esc(session.comment||'')}</textarea>
+    <h2>Komentar (splošno)</h2>
+    <textarea data-bind="comment" placeholder="npr. počutje, spanje, kaj popraviti naslednjič">${esc(session.comment||'')}</textarea>
   </div>`;
 
   /* save / cancel */
@@ -1586,6 +1674,49 @@ function render(container, session, candidates, prIdx, opts, onChange) {
 
   container.innerHTML = html;
   bind(container, session, candidates, prIdx, opts, onChange);
+}
+
+/** Cardio exercise block: rows are intervals (min · km/h · % · km). */
+function renderCardioBlock(ex, i, session, opts) {
+  const prev = lastCardioFor(ex.name, opts.allSessions || [], session.id);
+  const parts = [];
+  if (ex.targetReps) parts.push(`cilj <b style="color:var(--txt)">${esc(ex.targetReps)}</b>`);
+  if (prev) parts.push(`zadnjič <b style="color:var(--txt)">${esc(fmtCardioSet(prev))}</b>`);
+  const hint = parts.join(' · ');
+  const ph = (v, d) => (v !== '' && v != null) ? String(v) : d;
+  return `<div class="ex-block cardio" data-ex-idx="${i}">
+    <div class="ex-name">
+      <span class="kind-tag">KARDIO</span>
+      <input type="text" data-ex-name="${i}" value="${esc(ex.name)}" placeholder="Kardio (npr. Treadmill)">
+      <button class="x" data-ex-del="${i}" title="Izbriši vajo">×</button>
+    </div>
+    ${hint ? `<div class="ex-hint">${hint}</div>` : ''}
+    <div class="set-row cardio head"><div></div><div>min</div><div>km/h</div><div>% nagib</div><div>km</div><div></div><div></div></div>
+    ${ex.sets.map((st, j) => {
+      const km = cardioKm({ ...st, distanceKm: '' });
+      return `
+      <div class="set-row cardio ${st.done?'set-done':''}" data-set="${i}-${j}">
+        <div class="idx">${j+1}</div>
+        <input type="number" inputmode="numeric" data-set-bind="${i}-${j}-durationMin"
+          value="${st.durationMin ?? ''}" placeholder="${esc(ph(prev?.durationMin, 'min'))}">
+        <input type="number" inputmode="decimal" step="0.1" data-set-bind="${i}-${j}-speed"
+          value="${st.speed ?? ''}" placeholder="${esc(ph(prev?.speed, 'km/h'))}">
+        <input type="number" inputmode="decimal" step="0.5" data-set-bind="${i}-${j}-incline"
+          value="${st.incline ?? ''}" placeholder="${esc(ph(prev?.incline, '%'))}">
+        <input type="number" inputmode="decimal" step="0.01" data-set-bind="${i}-${j}-distanceKm"
+          value="${st.distanceKm ?? ''}" placeholder="${km > 0 ? km.toFixed(2) : 'km'}">
+        <button class="done-btn" data-set-done="${i}-${j}" data-done="${st.done}"
+          title="Označi interval kot opravljen">${st.done?'✓':'•'}</button>
+        <button class="x" data-set-del="${i}-${j}" title="Izbriši interval">×</button>
+      </div>`;
+    }).join('')}
+    <div class="set-add">
+      <button class="btn ghost sm" data-set-add="${i}">＋ Interval</button>
+    </div>
+    <div class="opomba">
+      <textarea data-bind="ex-note-${i}" placeholder="Opomba (npr. hoja, kolo, počutje)">${esc(ex.note||'')}</textarea>
+    </div>
+  </div>`;
 }
 
 /* ---------------------------------------------------------------- bind */
@@ -1625,8 +1756,21 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
   container.querySelectorAll('[data-ex-name]').forEach(inp => {
     const i = +inp.dataset.exName;
     attachAutocomplete(inp, candidates, name => {
-      session.exercises[i].name = name;
-      session.exercises[i].canonical = canonical(name);
+      const ex = session.exercises[i];
+      ex.name = name;
+      ex.canonical = canonical(name);
+      // Picked a name last logged as cardio (or vice versa) into an untouched
+      // block → switch the block's kind so the right columns show up.
+      const cand = candidates.find(c => c.canonical === ex.canonical);
+      const wantKind = cand?.kind === 'cardio' ? 'cardio' : 'strength';
+      const untouched = !ex.sets.some(st => setHasData(ex, st));
+      if (untouched && wantKind !== (ex.kind || 'strength')) {
+        ex.kind = wantKind;
+        ex.sets = [wantKind === 'cardio' ? newCardioSet() : newSet()];
+        touch();
+        render(container, session, candidates, prIdx, opts, onChange);
+        return;
+      }
       touch();
     });
     inp.addEventListener('input', () => {
@@ -1653,7 +1797,13 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
     const i = +iS, j = +jS;
     inp.addEventListener('input', () => {
       const v = inp.value;
-      session.exercises[i].sets[j][key] = v === '' ? '' : Number(v);
+      const ex = session.exercises[i];
+      ex.sets[j][key] = v === '' ? '' : Number(v);
+      if (isCardio(ex) && (key === 'speed' || key === 'durationMin')) {
+        const km = cardioKm({ ...ex.sets[j], distanceKm: '' });
+        const dist = container.querySelector(`[data-set-bind="${i}-${j}-distanceKm"]`);
+        if (dist) dist.placeholder = km > 0 ? km.toFixed(2) : 'km';
+      }
       touch();
     });
   });
@@ -1662,7 +1812,8 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
   container.querySelectorAll('[data-set-add]').forEach(btn => {
     btn.addEventListener('click', () => {
       const i = +btn.dataset.setAdd;
-      session.exercises[i].sets.push(newSet());
+      const ex = session.exercises[i];
+      ex.sets.push(isCardio(ex) ? newCardioSet() : newSet());
       touch();
       render(container, session, candidates, prIdx, opts, onChange);
     });
@@ -1673,9 +1824,10 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
     btn.addEventListener('click', () => {
       const [iS, jS] = btn.dataset.setDel.split('-');
       const i = +iS, j = +jS;
-      session.exercises[i].sets.splice(j, 1);
-      if (session.exercises[i].sets.length === 0) {
-        session.exercises[i].sets.push(newSet());
+      const ex = session.exercises[i];
+      ex.sets.splice(j, 1);
+      if (ex.sets.length === 0) {
+        ex.sets.push(isCardio(ex) ? newCardioSet() : newSet());
       }
       touch();
       render(container, session, candidates, prIdx, opts, onChange);
@@ -1691,7 +1843,9 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
       s.done = !s.done;
       touch();
 
-      if (s.done) {
+      if (isCardio(session.exercises[i])) {
+        // no PR / rest timer for cardio — just the visual toggle below
+      } else if (s.done) {
         // PR check
         const pr = checkSetPR(prIdx, session.exercises[i].name, s);
         if (pr && opts.prCelebrationOn !== false) {
@@ -1727,6 +1881,15 @@ function bind(container, session, candidates, prIdx, opts, onChange) {
     touch();
     render(container, session, candidates, prIdx, opts, onChange);
   });
+  const addCardioBtn = container.querySelector('[data-add-cardio]');
+  if (addCardioBtn) addCardioBtn.addEventListener('click', () => {
+    // Prefill with the most recently used cardio name, if any.
+    const last = candidates.find(c => c.kind === 'cardio');
+    session.exercises.push(newCardioExercise(last ? last.name : 'Treadmill (Incline Walk)'));
+    touch();
+    render(container, session, candidates, prIdx, opts, onChange);
+    container.querySelector(`[data-set-bind="${session.exercises.length - 1}-0-durationMin"]`)?.focus();
+  });
 
   /* save / cancel */
   const saveBtn = container.querySelector('[data-save]');
@@ -1758,12 +1921,27 @@ function lastSetsFor(exerciseName, sessions, excludeId) {
     .sort((a, b) => b.date.localeCompare(a.date));
   for (const s of sorted) {
     const ex = (s.exercises || []).find(e => (e.canonical || canonical(e.name)) === c);
-    if (!ex || !ex.sets) continue;
-    const used = ex.sets.filter(st =>
-      (st.reps !== '' && st.reps != null) || (st.weight !== '' && st.weight != null));
+    if (!ex || !ex.sets || isCardio(ex)) continue;
+    const used = ex.sets.filter(st => setHasData(ex, st));
     if (used.length) return used;
   }
   return [];
+}
+
+function lastCardioFor(exerciseName, sessions, excludeId) {
+  // most recent cardio block with this name → its first filled interval
+  const c = canonical(exerciseName);
+  if (!c) return null;
+  const sorted = [...sessions]
+    .filter(s => s.id !== excludeId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const s of sorted) {
+    const ex = (s.exercises || []).find(e => isCardio(e) && (e.canonical || canonical(e.name)) === c);
+    if (!ex) continue;
+    const st = (ex.sets || []).find(x => setHasData(ex, x));
+    if (st) return st;
+  }
+  return null;
 }
 
 function lastDoneTopFor(exerciseName, sessions, excludeId) {
@@ -1775,7 +1953,7 @@ function lastDoneTopFor(exerciseName, sessions, excludeId) {
     .sort((a, b) => b.date.localeCompare(a.date));
   for (const s of sorted) {
     const ex = (s.exercises || []).find(e => (e.canonical || canonical(e.name)) === c);
-    if (!ex || !ex.sets) continue;
+    if (!ex || !ex.sets || isCardio(ex)) continue;
     let top = null;
     for (const st of ex.sets) {
       if (!st.weight && !st.reps) continue;
@@ -1799,14 +1977,31 @@ __M["views/editor.js"] = { renderEditor };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
-const { newSession, sessionFromTemplate } = __M["state/schema.js"];
+const { newSession, sessionFromTemplate, newCardioExercise, newCardioSet, setHasData } = __M["state/schema.js"];
+const { canonical } = __M["state/normalize.js"];
 const { renderEditor } = __M["views/editor.js"];
 const { toast, confirm2 } = __M["lib/dom.js"];
+
+/** Kind an exercise name was last logged as ('cardio' | 'strength'). */
+function lastKindFor(name, sessions) {
+  const c = canonical(name);
+  if (!c) return 'strength';
+  let best = null;
+  for (const s of sessions) {
+    if (best && s.date <= best.date) continue;
+    const ex = (s.exercises || []).find(e => (e.canonical || canonical(e.name)) === c);
+    if (ex) best = { date: s.date, kind: ex.kind === 'cardio' ? 'cardio' : 'strength' };
+  }
+  return best ? best.kind : 'strength';
+}
 
 /** Public API: start a new draft from a template (or empty). */
 function startNew(type, exerciseNames) {
   store.update(s => {
     s.draft = newSession({ type, exerciseNames });
+    // User templates store names only — restore cardio kind from history.
+    s.draft.exercises = s.draft.exercises.map(e =>
+      lastKindFor(e.name, s.sessions) === 'cardio' ? newCardioExercise(e.name) : e);
   });
 }
 
@@ -1827,8 +2022,9 @@ function repeatFrom(srcId) {
       id: 'e_' + Math.random().toString(36).slice(2, 8),
       name: e.name,
       canonical: e.canonical,
+      kind: e.kind === 'cardio' ? 'cardio' : 'strength',
       note: '',
-      sets: (e.sets || []).map(x => ({
+      sets: (e.sets || []).map(x => e.kind === 'cardio' ? newCardioSet() : ({
         id: 'x_' + Math.random().toString(36).slice(2, 8),
         reps: '', weight: '', done: false, restSec: null,
       })),
@@ -1876,7 +2072,7 @@ async function commit(router) {
 
   // Drop empty sets and empty exercises.
   d.exercises = d.exercises
-    .map(e => ({ ...e, sets: e.sets.filter(st => st.reps !== '' || st.weight !== '') }))
+    .map(e => ({ ...e, sets: e.sets.filter(st => setHasData(e, st)) }))
     .filter(e => e.name && e.name.trim());
 
   if (!d.exercises.length) {
@@ -2045,7 +2241,7 @@ function render(container, router) {
   let html = `<div class="card"><h2>6-dnevni Push / Pull / Legs</h2><div class="tpl-grid">`;
   const GROUP_COLOR = { Push: '#ff5722', Pull: '#3b82f6', Legs: '#22c55e' };
   BUILTIN_TEMPLATES.forEach((t, i) => {
-    const setCount = t.exercises.reduce((a, e) => a + e[1], 0);
+    const setCount = t.exercises.reduce((a, e) => a + (e[3] === 'cardio' ? 0 : e[1]), 0);
     const col = GROUP_COLOR[t.group] || 'var(--accent)';
     html += `<button class="tpl-card" data-builtin="${i}" style="border-left:3px solid ${col}">
       <h3>${esc(t.name)}</h3>
@@ -2213,7 +2409,8 @@ __M["views/history.js"] = { render };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
-const { esc, fmtDate, toast, confirm2 } = __M["lib/dom.js"];
+const { esc, fmtDate, toast, confirm2, fmtCardioSet } = __M["lib/dom.js"];
+const { setHasData } = __M["state/schema.js"];
 const { renderEditor } = __M["views/editor.js"];
 const { repeatFrom } = __M["views/active.js"];
 
@@ -2249,12 +2446,13 @@ function renderView(container, router, s) {
 
   for (const ex of (s.exercises || [])) {
     const sets = ex.sets || [];
-    html += `<div class="ex-block">
-      <div style="font-weight:700;margin-bottom:6px">${esc(ex.name)}</div>
+    const cardio = ex.kind === 'cardio';
+    html += `<div class="ex-block ${cardio ? 'cardio' : ''}">
+      <div style="font-weight:700;margin-bottom:6px">${cardio ? '<span class="kind-tag" style="margin-right:6px">KARDIO</span>' : ''}${esc(ex.name)}</div>
       ${sets.length ? sets.map((st, i) => `
         <div class="set-row" style="grid-template-columns:30px 1fr">
           <div class="idx">${i+1}</div>
-          <div>${st.reps ?? '–'} × ${st.weight ?? '–'}${st.weight ? ' kg' : ''}</div>
+          <div>${cardio ? esc(fmtCardioSet(st)) : `${st.reps ?? '–'} × ${st.weight ?? '–'}${st.weight ? ' kg' : ''}`}</div>
         </div>
       `).join('') : '<div class="muted">brez serij</div>'}
       ${ex.note ? `<div class="opomba muted" style="font-size:13px;margin-top:6px;font-style:italic">${esc(ex.note)}</div>` : ''}
@@ -2309,7 +2507,7 @@ function renderEdit(container, router, sessionId) {
     onSave: () => {
       // Drop empty sets / exercises like commit() does.
       copy.exercises = copy.exercises
-        .map(e => ({ ...e, sets: e.sets.filter(st => st.reps !== '' || st.weight !== '') }))
+        .map(e => ({ ...e, sets: e.sets.filter(st => setHasData(e, st)) }))
         .filter(e => e.name && e.name.trim());
       copy.updatedAt = Date.now();
       store.update(state => {
@@ -2355,6 +2553,7 @@ function render(container, router) {
   const byEx = {};   // canonical → { name, points: [{date, weight, reps}] }
   for (const s of sessions) {
     for (const e of (s.exercises || [])) {
+      if (e.kind === 'cardio') continue; // strength charts only (for now)
       const c = e.canonical || canonical(e.name);
       if (!c) continue;
       const slot = byEx[c] || (byEx[c] = { name: e.name, points: [] });
@@ -2638,6 +2837,7 @@ const { store } = __M["state/store.js"];
 const { esc, SL } = __M["lib/dom.js"];
 const { buildPRIndex } = __M["lib/pr.js"];
 const { canonical } = __M["state/normalize.js"];
+const { cardioKm } = __M["state/schema.js"];
 
 const GCOL = { Push:'#ff5722', Pull:'#3b82f6', Legs:'#22c55e', 'Ostalo':'#8a929c' };
 
@@ -2665,15 +2865,21 @@ function render(container, router){
     return;
   }
 
-  let tonnage=0, minutes=0, rpeSum=0, rpeN=0;
+  let tonnage=0, minutes=0, rpeSum=0, rpeN=0, cardioMin=0, cardioDist=0;
   const vol={Push:0,Pull:0,Legs:0,'Ostalo':0};
   for(const s of wk){
     minutes+=s.durationMin||0;
     if(s.rpe){rpeSum+=s.rpe; rpeN++;}
     const g=groupOf(s.type);
-    for(const e of (s.exercises||[])) for(const x of (e.sets||[])){
-      const v=(Number(x.reps)||0)*(Number(x.weight)||0);
-      tonnage+=v; vol[g]+=v;
+    for(const e of (s.exercises||[])){
+      if(e.kind==='cardio'){
+        for(const x of (e.sets||[])){ cardioMin+=Number(x.durationMin)||0; cardioDist+=cardioKm(x); }
+        continue;
+      }
+      for(const x of (e.sets||[])){
+        const v=(Number(x.reps)||0)*(Number(x.weight)||0);
+        tonnage+=v; vol[g]+=v;
+      }
     }
   }
   const avgRpe=rpeN?(rpeSum/rpeN).toFixed(1):'–';
@@ -2682,6 +2888,7 @@ function render(container, router){
   const prior=buildPRIndex(all.filter(s=>s.date<startISO));
   const seen={};
   for(const s of wk) for(const e of (s.exercises||[])){
+    if(e.kind==='cardio') continue;
     const c=e.canonical||canonical(e.name); if(!c)continue;
     let topW=0; for(const x of (e.sets||[])){const w=Number(x.weight)||0; if(w>topW)topW=w;}
     const before=(prior[c]&&prior[c].weight)||0;
@@ -2702,7 +2909,8 @@ function render(container, router){
   if(!recs.length) recs.push('Soliden, uravnotežen teden. Nadaljuj enako in postopoma dodajaj težo.');
 
   const title = prs.length ? `Teden z ${prs.length} ${prs.length===1?'novim rekordom':'novimi rekordi'}` : (wk.length>=4?'Konsistenten teden':'Miren teden');
-  const summary = `${wk.length} ${wk.length===1?'trening':'treningov'}, ${tStr} skupaj, povprečni RPE ${avgRpe}.`;
+  const cardioStr = cardioMin>0 ? `, kardio ${Math.round(cardioMin)} min${cardioDist>0?` / ${cardioDist.toFixed(1)} km`:''}` : '';
+  const summary = `${wk.length} ${wk.length===1?'trening':'treningov'}, ${tStr} skupaj${cardioStr}, povprečni RPE ${avgRpe}.`;
 
   let html='';
   html+=`<div class="card" style="border:1px solid #2c2740;background:linear-gradient(160deg,#1a1723,var(--panel))">
