@@ -707,6 +707,7 @@ __M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, ne
  * ===================================================================== */
 
 const { KEYS, SCHEMA_VERSION, emptyState, loadOrMigrate, normalizeSession } = __M["state/schema.js"];
+const { canonical } = __M["state/normalize.js"];
 
 class Store {
   constructor() {
@@ -826,6 +827,15 @@ class Store {
     }
   }
 
+  /** Rename an exercise everywhere (sessions, draft, user templates).
+   *  If newName already exists as another exercise, their history merges.
+   *  Returns the number of sessions touched. */
+  renameExercise(fromCanonical, newName) {
+    let n = 0;
+    this.update(s => { n = applyRename(s, fromCanonical, newName); });
+    return n;
+  }
+
   replaceAll(next) {
     this.state = { ...emptyState(), ...next, version: SCHEMA_VERSION };
     this.state.sessions = (this.state.sessions || []).map(normalizeSession);
@@ -833,6 +843,26 @@ class Store {
     this._scheduleSync();
     this._emit('data');
   }
+}
+
+function applyRename(state, fromCanonical, newName) {
+  const toC = canonical(newName);
+  const now = Date.now();
+  let n = 0;
+  const fix = e => {
+    if ((e.canonical || canonical(e.name)) !== fromCanonical) return false;
+    e.name = newName; e.canonical = toC; return true;
+  };
+  for (const s of (state.sessions || [])) {
+    let hit = false;
+    for (const e of (s.exercises || [])) hit = fix(e) || hit;
+    if (hit) { s.updatedAt = now; n++; } // bumped so sync pushes the change
+  }
+  if (state.draft) for (const e of (state.draft.exercises || [])) fix(e);
+  for (const k of Object.keys(state.templates || {})) {
+    state.templates[k] = (state.templates[k] || []).map(nm => canonical(nm) === fromCanonical ? newName : nm);
+  }
+  return n;
 }
 
 function mergeStates(local, remote) {
@@ -867,7 +897,7 @@ function mergeBW(a, b) {
 
 const store = new Store();
 
-__M["state/store.js"] = { mergeStates, store };
+__M["state/store.js"] = { mergeStates, applyRename, store };
 }
 /* sync/adapter.js */
 {
@@ -2594,13 +2624,15 @@ __M["views/detail.js"] = { render };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
-const { esc, SL } = __M["lib/dom.js"];
+const { esc, SL, toast, confirm2 } = __M["lib/dom.js"];
 const { canonical } = __M["state/normalize.js"];
 const { estimate1RM, exerciseVolume } = __M["lib/onerm.js"];
 const { lineChart, barChart } = __M["lib/chart.js"];
+const { buildCandidates, attachAutocomplete } = __M["lib/autocomplete.js"];
 
 let _selCanonical = '';
 let _mode = 'top'; // 'top' | 'e1rm' | 'volume'
+let _renaming = false;
 
 function render(container, router) {
   document.getElementById('title').textContent = 'Progres';
@@ -2642,6 +2674,7 @@ function render(container, router) {
   if (!_selCanonical || !byEx[_selCanonical]) _selCanonical = names[0][0];
   const data = byEx[_selCanonical].points;
 
+  const curName = byEx[_selCanonical].name;
   let html = `<div class="card">
     <div class="field">
       <label>Vaja</label>
@@ -2649,6 +2682,16 @@ function render(container, router) {
         `<option value="${esc(c)}" ${c===_selCanonical?'selected':''}>${esc(v.name)}</option>`
       ).join('')}</select>
     </div>
+    ${_renaming ? `
+    <div class="field">
+      <label>Novo ime za »${esc(curName)}« (obstoječe ime = združi zgodovino)</label>
+      <div class="row" style="gap:8px;align-items:stretch">
+        <div class="ex-name" style="flex:1;margin:0"><input type="text" id="renameIn" value="${esc(curName)}" autocomplete="off"></div>
+        <button class="btn success sm" data-rename-save>Shrani</button>
+        <button class="btn ghost sm" data-rename-cancel title="Prekliči">×</button>
+      </div>
+    </div>` : `
+    <button class="btn ghost sm" data-rename style="margin-bottom:10px">✎ Preimenuj / združi vajo</button>`}
     <div class="chart-tabs">
       <button data-mode="top" data-active="${_mode==='top'}">Top teža</button>
       <button data-mode="e1rm" data-active="${_mode==='e1rm'}">Ocenjen 1RM</button>
@@ -2706,6 +2749,39 @@ function render(container, router) {
     _mode = b.dataset.mode;
     render(container, router);
   }));
+
+  /* rename / merge */
+  container.querySelector('[data-rename]')?.addEventListener('click', () => {
+    _renaming = true; render(container, router);
+    const inp = container.querySelector('#renameIn'); inp?.focus(); inp?.select();
+  });
+  container.querySelector('[data-rename-cancel]')?.addEventListener('click', () => {
+    _renaming = false; render(container, router);
+  });
+  const renameIn = container.querySelector('#renameIn');
+  if (renameIn) {
+    const cands = buildCandidates(sessions).filter(c => c.canonical !== _selCanonical);
+    attachAutocomplete(renameIn, cands, () => {});
+    const save = async () => {
+      const newName = renameIn.value.trim();
+      const toC = canonical(newName);
+      if (!toC) { toast('Vpiši ime vaje', 'err'); return; }
+      const fromName = curName;
+      const inSessions = c => sessions.filter(s => (s.exercises || []).some(e => (e.canonical || canonical(e.name)) === c)).length;
+      const nFrom = inSessions(_selCanonical);
+      const merge = toC !== _selCanonical && inSessions(toC) > 0;
+      const q = merge
+        ? `Združim »${fromName}« (${nFrom} sej) z »${newName}« (${inSessions(toC)} sej)? Zgodovina se združi pod novim imenom.`
+        : `Preimenujem »${fromName}« v »${newName}« v ${nFrom} sejah?`;
+      if (!await confirm2(q)) return;
+      const n = store.renameExercise(_selCanonical, newName);
+      _selCanonical = toC; _renaming = false;
+      toast(`${merge ? 'Združeno' : 'Preimenovano'} (${n} sej)`);
+      render(container, router);
+    };
+    container.querySelector('[data-rename-save]')?.addEventListener('click', save);
+    renameIn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  }
 }
 
 __M["views/progress.js"] = { render };
