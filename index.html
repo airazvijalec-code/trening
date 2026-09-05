@@ -412,7 +412,33 @@ function fuzzyMatch(input, knownNames, limit = 6) {
   return scored.slice(0, limit).map(x => x.n);
 }
 
-__M["state/normalize.js"] = { canonical, lev, fuzzyMatch };
+/**
+ * How well does a typed query match a canonical name? Lower is better.
+ *   0 = name starts with the query          ("lat" → "lat pulldown cable")
+ *   1 = every query word starts some word   ("lat r" → "lateral raise dumbbell")
+ *   2 = name contains the query             ("press" → "leg press machine")
+ *   3 = typo within a word (query ≥ 3 chars) ("bnch" → "bench press barbell")
+ *   9 = no match
+ * Levenshtein is NOT used for 1–2 letter queries — "z" would otherwise
+ * match "list" and "uski" just because they are short.
+ */
+function matchTier(query, c) {
+  const q = canonical(query);
+  if (!q) return 0;
+  if (!c) return 9;
+  if (c.startsWith(q)) return 0;
+  const words = c.split(' ');
+  const qWords = q.split(' ');
+  if (qWords.every(qw => words.some(w => w.startsWith(qw)))) return 1;
+  if (c.includes(q)) return 2;
+  if (q.length >= 3) {
+    const tol = q.length >= 6 ? 2 : 1;
+    if (qWords.every(qw => words.some(w => lev(qw, w, tol) <= tol))) return 3;
+  }
+  return 9;
+}
+
+__M["state/normalize.js"] = { canonical, lev, fuzzyMatch, matchTier };
 }
 /* state/schema.js */
 {
@@ -1335,14 +1361,18 @@ __M["lib/chart.js"] = { lineChart, barChart };
  * Click to commit. Escape/blur to close.
  * ===================================================================== */
 
-const { fuzzyMatch, canonical } = __M["state/normalize.js"];
+const { matchTier, canonical } = __M["state/normalize.js"];
 const { esc } = __M["lib/dom.js"];
 
 /**
- * Build a list of exercise candidates from sessions.
- * Returns array of { name, canonical, count } sorted by recent use.
+ * Build a list of exercise candidates from sessions, plus the names of the
+ * built-in program (so a new program's exercises are suggested before they
+ * have ever been logged). Returns { name, canonical, kind, count, lastUsed,
+ * program } sorted by recent use; program names carry program = true.
+ * @param {Array} sessions
+ * @param {Array<{name, kind?}>} programNames  optional built-in names
  */
-function buildCandidates(sessions) {
+function buildCandidates(sessions, programNames = []) {
   const map = new Map(); // canonical → { name, canonical, count, lastUsed }
   for (const s of sessions) {
     for (const e of (s.exercises || [])) {
@@ -1357,8 +1387,37 @@ function buildCandidates(sessions) {
       map.set(c, cur);
     }
   }
+  for (const pn of programNames) {
+    const c = canonical(pn.name);
+    if (!c) continue;
+    const cur = map.get(c) || { name: pn.name, canonical: c, kind: pn.kind === 'cardio' ? 'cardio' : 'strength', count: 0, lastUsed: '' };
+    cur.program = true;
+    cur.name = pn.name; // program spelling wins over historical variants
+    map.set(c, cur);
+  }
   return Array.from(map.values())
     .sort((a, b) => b.lastUsed.localeCompare(a.lastUsed));
+}
+
+/**
+ * Rank candidates for a query: match tier first, then program names,
+ * then most recently used. Old, long-unused names naturally sink.
+ */
+function rankCandidates(query, candidates, limit = 6) {
+  const q = canonical(query);
+  const scored = [];
+  for (const c of candidates) {
+    const tier = matchTier(q, c.canonical);
+    if (tier > 8) continue;
+    scored.push({ c, tier });
+  }
+  scored.sort((a, b) =>
+    a.tier - b.tier
+    || (q ? (b.c.program ? 1 : 0) - (a.c.program ? 1 : 0) : 0)
+    || (b.c.lastUsed || '').localeCompare(a.c.lastUsed || '')
+    || (b.c.count - a.c.count)
+    || a.c.name.localeCompare(b.c.name));
+  return scored.slice(0, limit).map(x => x.c.name);
 }
 
 /**
@@ -1373,10 +1432,7 @@ function attachAutocomplete(input, candidates, onPick) {
   const open = () => {
     close();
     const q = input.value.trim();
-    const names = candidates.map(c => c.name);
-    const hits = q
-      ? fuzzyMatch(q, names, 6)
-      : names.slice(0, 6);
+    const hits = rankCandidates(q, candidates, 6);
     if (!hits.length) return;
     list = document.createElement('div');
     list.className = 'ac-list';
@@ -1398,7 +1454,7 @@ function attachAutocomplete(input, candidates, onPick) {
   input.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 }
 
-__M["lib/autocomplete.js"] = { buildCandidates, attachAutocomplete };
+__M["lib/autocomplete.js"] = { buildCandidates, rankCandidates, attachAutocomplete };
 }
 /* lib/pr.js */
 {
@@ -1624,7 +1680,14 @@ __M["views/pr_flash.js"] = { celebratePR };
  * ===================================================================== */
 
 const { esc, toast, confirm2, debounce, fmtCardioSet } = __M["lib/dom.js"];
-const { newExercise, newCardioExercise, newSet, newCardioSet, isCardio, setHasData, cardioKm } = __M["state/schema.js"];
+const { newExercise, newCardioExercise, newSet, newCardioSet, isCardio, setHasData, cardioKm, BUILTIN_TEMPLATES } = __M["state/schema.js"];
+
+/** Names (with kind) from the built-in program, for autocomplete. */
+function programNames() {
+  const out = [];
+  for (const t of BUILTIN_TEMPLATES) for (const [name, , , kind] of t.exercises) out.push({ name, kind });
+  return out;
+}
 const { canonical } = __M["state/normalize.js"];
 const { attachAutocomplete, buildCandidates } = __M["lib/autocomplete.js"];
 const { timer } = __M["lib/timer.js"];
@@ -1640,7 +1703,7 @@ const { celebratePR } = __M["views/pr_flash.js"];
  *                             timerSound, timerHaptic }
  */
 function renderEditor(container, session, opts) {
-  const candidates = buildCandidates(opts.allSessions || []);
+  const candidates = buildCandidates(opts.allSessions || [], programNames());
   const prIdx = buildPRIndex(opts.allSessions || [], session.id);
 
   const onChange = debounce(opts.onChange || (() => {}), 200);
@@ -2629,6 +2692,7 @@ const { canonical } = __M["state/normalize.js"];
 const { estimate1RM, exerciseVolume } = __M["lib/onerm.js"];
 const { lineChart, barChart } = __M["lib/chart.js"];
 const { buildCandidates, attachAutocomplete } = __M["lib/autocomplete.js"];
+const { BUILTIN_TEMPLATES } = __M["state/schema.js"];
 
 let _selCanonical = '';
 let _mode = 'top'; // 'top' | 'e1rm' | 'volume'
@@ -2760,7 +2824,8 @@ function render(container, router) {
   });
   const renameIn = container.querySelector('#renameIn');
   if (renameIn) {
-    const cands = buildCandidates(sessions).filter(c => c.canonical !== _selCanonical);
+    const program = BUILTIN_TEMPLATES.flatMap(t => t.exercises.map(([name, , , kind]) => ({ name, kind })));
+    const cands = buildCandidates(sessions, program).filter(c => c.canonical !== _selCanonical);
     attachAutocomplete(renameIn, cands, () => {});
     const save = async () => {
       const newName = renameIn.value.trim();
