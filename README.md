@@ -7,6 +7,8 @@ Mobilni beležnik vadb za moč — hitro vnašanje serij med treningom, sledenje
 ## Funkcije
 
 - Beleženje treningov: vaje, serije (teža × ponovitve), RPE, počitek, komentar, telesna teža
+- Kardio kot vaja: minute, hitrost, nagib in razdalja (izračunana iz hitrosti × časa, če je ne vpišeš)
+- Deluje brez signala (PWA): service worker + manifest — dodaj na domači zaslon in app se odpre tudi v kleti
 - Vgrajene predloge — 6-dnevni Push/Pull/Legs split + lastne predloge
 - Samodejno zaznavanje osebnih rekordov (teža, e1RM, volumen) s proslavo 🎉
 - Grafi napredka po vajah: najtežja serija, ocenjen 1RM (Epley/Brzycki/Lombardi), volumen
@@ -17,7 +19,7 @@ Mobilni beležnik vadb za moč — hitro vnašanje serij med treningom, sledenje
 
 ## Zagon lokalno
 
-Brez builda, brez odvisnosti — ena datoteka.
+Brez builda, brez odvisnosti — ena datoteka (plus `sw.js`, `manifest.json` in `icons/` za PWA).
 
 ```bash
 python3 -m http.server 8000
@@ -38,4 +40,3 @@ Token se hrani samo lokalno v brskalniku in se nikoli ne sinhronizira.
 
 Cela aplikacija je **ena datoteka `index.html`** (vanilla JS, brez frameworkov). Koda je organizirana v module prek vzorca `__M["pot/datoteka.js"]` — podrobnosti, pravila razvoja in znani dolgovi so v [CLAUDE.md](CLAUDE.md).
 
-`prototype.html` je zamrznjen prototip iz zgodnje faze — ni del aplikacije.

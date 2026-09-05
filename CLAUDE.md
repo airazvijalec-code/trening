@@ -1,7 +1,8 @@
 # Trening — kontekst za Claude Code
 
 Mobile-first beležnik vadb za moč (PWA-stil, temna tema, UI v slovenščini).
-Cela aplikacija je **ena datoteka: `index.html`** (~2900 vrstic) — vanilla JS, brez frameworkov, brez odvisnosti, brez build sistema. To je zavestna odločitev, ne pomanjkljivost.
+Cela aplikacija je **ena datoteka: `index.html`** (~3200 vrstic) — vanilla JS, brez frameworkov, brez odvisnosti, brez build sistema. To je zavestna odločitev, ne pomanjkljivost.
+Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` (service worker), `manifest.json` in `icons/` (PNG ikone, generirane iz favicon SVG-ja).
 
 ## Arhitektura
 
@@ -18,7 +19,8 @@ Cela aplikacija je **ena datoteka: `index.html`** (~2900 vrstic) — vanilla JS,
 | `lib/chart.js` | inline SVG line/bar grafi (500×200) |
 | `lib/autocomplete.js`, `lib/pr.js`, `lib/timer.js` | predlogi imen vaj, PR detekcija, rest timer |
 | `views/*` | home, new, active (editor seje), history, detail, progress, report, settings, pr_flash |
-| `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()` |
+| `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()`, registracija SW |
+| `sw.js` (ločena datoteka) | offline: aplikacija cache-first + osvežitev v ozadju, GitHub API samo mreža, Google Fonts cache-first; cache `trening-v1` — `VERSION` dvigni, ko spremeniš `APP_SHELL` |
 
 ## Podatkovni model (v3)
 
@@ -45,13 +47,12 @@ Cela aplikacija je **ena datoteka: `index.html`** (~2900 vrstic) — vanilla JS,
 - Pred vsako netrivialno spremembo (schema, sync, router) najprej kratek načrt v 5–10 vrsticah in počakaj na "gremo".
 - Po vsaki spremembi napiši, **kako naj jo ročno preverim** (koraki klika na telefonu/desktopu).
 - Test lokalno: `python3 -m http.server 8000` v korenu repa → `http://localhost:8000`. Sync testiraš z lastnim PAT (scope `gist`).
+- Service worker ob razvoju: v DevTools → Application → Service Workers vklopi "Update on reload", sicer vidiš staro verzijo `index.html` do naslednjega odprtja.
 
 ## Znani dolgovi (prioriteta pada)
 
-1. **Offline:** ni `manifest.json` in ni service workerja → app v kleti brez signala ne naloži. To je za fitnes app kritično.
-2. **Router ne pozna URL-jev:** back gumb na Androidu vrže iz aplikacije; ni deep-linkov. Rešitev: hash router (`#/history`, `#/detail/:id`).
-3. **Sync nima tombstonov:** lokalno izbrisana seja se ob `pull` vrne iz gista (mergeStates unija po id). Potrebni so zapisi o izbrisu.
-4. **Ni testov:** logika v `state/*` in `lib/*` (merge, migracije, e1RM, PR, canonical) je čisto testabilna.
-5. **README je prazen**, `prototype.html` (1 MB) je mrtva teža v korenu.
-6. Vsak sync push pošlje celotno stanje — z leti podatkov postane potratno (nizka prioriteta).
+1. **Router ne pozna URL-jev:** back gumb na Androidu vrže iz aplikacije; ni deep-linkov. Rešitev: hash router (`#/history`, `#/detail/:id`).
+2. **Sync nima tombstonov:** lokalno izbrisana seja se ob `pull` vrne iz gista (mergeStates unija po id). Potrebni so zapisi o izbrisu.
+3. **Ni testov:** logika v `state/*` in `lib/*` (merge, migracije, e1RM, PR, canonical) je čisto testabilna.
+4. Vsak sync push pošlje celotno stanje — z leti podatkov postane potratno (nizka prioriteta).
 
