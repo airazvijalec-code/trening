@@ -476,6 +476,7 @@ const KEYS = {
   V1: 'trening_data_v1',     // legacy
   V2: 'trening_data_v2',     // current
   TOKEN: 'trening_gist_token', // separate from main blob (never synced)
+  PROGRAM: 'trening_program',  // which built-in program this device shows (never synced)
 };
 
 /** Generate a short stable id. */
@@ -738,13 +739,20 @@ function todayISO() {
 }
 
 /* =====================================================================
- * Built-in workout templates — 6-Day Push/Pull/Legs split.
+ * Built-in workout programs — one per person using this deployment.
  * Each exercise: [name, setCount, repRange, kind?]. repRange is a display
  * hint; kind 'cardio' makes the entry a cardio block (min · km/h · % · km).
  * These live in code (not state) so they always appear and never get
  * flattened by the auto-save-on-commit logic.
+ *
+ * Which program a device shows is decided ONCE by the install link
+ * (index.html?p=mirela) and remembered in localStorage KEYS.PROGRAM —
+ * outside the synced state, so it survives "Pobriši vse" and import.
+ * No program picker in the UI on purpose: each phone sees only its own.
  * ===================================================================== */
-const BUILTIN_TEMPLATES = [
+const DEFAULT_PROGRAM = 'alen';
+
+const PPL_ALEN = [
   { name: 'Push 1', group: 'Push', exercises: [
     ['Bench Press (Barbell)', 4, '6-10'],
     ['Seated Shoulder Press (Machine)', 3, '10-12'],
@@ -800,6 +808,74 @@ const BUILTIN_TEMPLATES = [
   ]},
 ];
 
+/* Mirela — celo telo 3× na teden + opcijski dan za zadnjico. Splošna
+ * kondicija, zadnjica v fokusu, domači fitnes, brez omejitev. */
+const CARDIO_M = ['Treadmill (Incline Walk)', 1, '15-20 min · 10-12 % · 4-5 km/h', 'cardio'];
+const FULLBODY_MIRELA = [
+  { name: 'Celo telo A', group: 'Full', exercises: [
+    ['Goblet Squat (Dumbbell)', 3, '10-12'],
+    ['Hip Thrust (Barbell)', 4, '8-12'],
+    ['Romanian Deadlift (Dumbbell)', 3, '10-12'],
+    ['Bench Press (Dumbbell)', 3, '8-12'],
+    ['Seated Cable Row', 3, '10-12'],
+    ['Plank', 3, '30-60 s'],
+    CARDIO_M,
+  ]},
+  { name: 'Celo telo B', group: 'Full', exercises: [
+    ['Bulgarian Split Squat (Dumbbell)', 3, '10 / nogo'],
+    ['Cable Kickback', 3, '12-15 / nogo'],
+    ['Shoulder Press (Dumbbell)', 3, '10-12'],
+    ['Lat Pulldown (Cable)', 3, '10-12'],
+    ['Lying Leg Curl (Machine)', 3, '12-15'],
+    ['Lateral Raise (Dumbbell)', 3, '12-15'],
+    ['Cable Crunch', 3, '15'],
+    CARDIO_M,
+  ]},
+  { name: 'Celo telo C', group: 'Full', exercises: [
+    ['Leg Press (Machine)', 3, '12-15'],
+    ['Sumo Squat (Dumbbell)', 3, '12-15'],
+    ['Hip Thrust (Barbell)', 3, '12-15'],
+    ['Incline Bench Press (Dumbbell)', 3, '10-12'],
+    ['Face Pull', 3, '15'],
+    ['Hammer Curl (Dumbbell)', 2, '12'],
+    ['Triceps Extension (Cable)', 2, '12'],
+    CARDIO_M,
+  ]},
+  { name: 'Zadnjica + kardio', group: 'Glute', exercises: [
+    ['Hip Thrust (Barbell)', 3, '15 lahko'],
+    ['Step-up (Dumbbell)', 3, '12 / nogo'],
+    ['Hip Abduction (Machine)', 3, '20'],
+    ['Glute Bridge', 3, '20'],
+    ['Plank', 3, '45 s'],
+    ['Treadmill (Incline Walk)', 1, '20-30 min · 10-12 % · 4-5 km/h', 'cardio'],
+  ]},
+];
+
+const BUILTIN_PROGRAMS = {
+  alen:   { title: '6-dnevni Push / Pull / Legs', templates: PPL_ALEN },
+  mirela: { title: 'Celo telo 3 + 1 (zadnjica)', templates: FULLBODY_MIRELA },
+};
+
+/** Program key for this device (set once from the install link). */
+function currentProgramKey() {
+  try {
+    const k = localStorage.getItem(KEYS.PROGRAM);
+    if (k && BUILTIN_PROGRAMS[k]) return k;
+  } catch (e) { /* storage unavailable */ }
+  return DEFAULT_PROGRAM;
+}
+
+/** The active program's template list (what "Nov trening" shows). */
+function builtinTemplates() { return BUILTIN_PROGRAMS[currentProgramKey()].templates; }
+function builtinProgramTitle() { return BUILTIN_PROGRAMS[currentProgramKey()].title; }
+
+/** Names (with kind) of the active program, for autocomplete. */
+function programExerciseNames() {
+  const out = [];
+  for (const t of builtinTemplates()) for (const [name, , , kind] of t.exercises) out.push({ name, kind });
+  return out;
+}
+
 /** Build a fresh draft session from a built-in template definition. */
 function sessionFromTemplate(def) {
   const s = newSession({ type: def.name });
@@ -808,7 +884,7 @@ function sessionFromTemplate(def) {
   return s;
 }
 
-__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_TEMPLATES, sessionFromTemplate, LEGACY_NAME_MAP, renameLegacyExercises };
+__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_PROGRAMS, DEFAULT_PROGRAM, currentProgramKey, builtinTemplates, builtinProgramTitle, programExerciseNames, sessionFromTemplate, LEGACY_NAME_MAP, renameLegacyExercises };
 }
 /* state/store.js */
 {
@@ -1767,14 +1843,7 @@ __M["views/pr_flash.js"] = { celebratePR };
  * ===================================================================== */
 
 const { esc, toast, confirm2, debounce, fmtCardioSet } = __M["lib/dom.js"];
-const { newExercise, newCardioExercise, newSet, newCardioSet, isCardio, setHasData, cardioKm, BUILTIN_TEMPLATES } = __M["state/schema.js"];
-
-/** Names (with kind) from the built-in program, for autocomplete. */
-function programNames() {
-  const out = [];
-  for (const t of BUILTIN_TEMPLATES) for (const [name, , , kind] of t.exercises) out.push({ name, kind });
-  return out;
-}
+const { newExercise, newCardioExercise, newSet, newCardioSet, isCardio, setHasData, cardioKm, programExerciseNames } = __M["state/schema.js"];
 const { canonical } = __M["state/normalize.js"];
 const { attachAutocomplete, buildCandidates } = __M["lib/autocomplete.js"];
 const { timer } = __M["lib/timer.js"];
@@ -1790,7 +1859,7 @@ const { celebratePR } = __M["views/pr_flash.js"];
  *                             timerSound, timerHaptic }
  */
 function renderEditor(container, session, opts) {
-  const candidates = buildCandidates(opts.allSessions || [], programNames());
+  const candidates = buildCandidates(opts.allSessions || [], programExerciseNames());
   const prIdx = buildPRIndex(opts.allSessions || [], session.id);
 
   const onChange = debounce(opts.onChange || (() => {}), 200);
@@ -2452,7 +2521,7 @@ __M["views/home.js"] = { render };
 
 const { store } = __M["state/store.js"];
 const { esc, fmtDate, toast, confirm2 } = __M["lib/dom.js"];
-const { BUILTIN_TEMPLATES } = __M["state/schema.js"];
+const { builtinTemplates, builtinProgramTitle } = __M["state/schema.js"];
 const { startNew, startFromTemplate, repeatFrom } = __M["views/active.js"];
 
 function render(container, router) {
@@ -2462,12 +2531,13 @@ function render(container, router) {
   const tpls = store.state.templates || {};
   const ss = [...store.state.sessions].sort((a, b) => b.date.localeCompare(a.date));
 
-  const builtinNames = new Set(BUILTIN_TEMPLATES.map(t => t.name));
+  const TPL = builtinTemplates();
+  const builtinNames = new Set(TPL.map(t => t.name));
 
-  /* Built-in 6-day Push/Pull/Legs split */
-  let html = `<div class="card"><h2>6-dnevni Push / Pull / Legs</h2><div class="tpl-grid">`;
-  const GROUP_COLOR = { Push: '#ff5722', Pull: '#3b82f6', Legs: '#22c55e' };
-  BUILTIN_TEMPLATES.forEach((t, i) => {
+  /* Built-in program for this device */
+  let html = `<div class="card"><h2>${esc(builtinProgramTitle())}</h2><div class="tpl-grid">`;
+  const GROUP_COLOR = { Push: '#ff5722', Pull: '#3b82f6', Legs: '#22c55e', Full: '#a78bfa', Glute: '#ec4899' };
+  TPL.forEach((t, i) => {
     const setCount = t.exercises.reduce((a, e) => a + (e[3] === 'cardio' ? 0 : e[1]), 0);
     const col = GROUP_COLOR[t.group] || 'var(--accent)';
     html += `<button class="tpl-card" data-builtin="${i}" style="border-left:3px solid ${col}">
@@ -2521,7 +2591,7 @@ function render(container, router) {
 
   container.querySelectorAll('[data-builtin]').forEach(btn =>
     btn.addEventListener('click', () => {
-      startFromTemplate(BUILTIN_TEMPLATES[+btn.dataset.builtin]);
+      startFromTemplate(TPL[+btn.dataset.builtin]);
       router.go('active');
     }));
   container.querySelectorAll('[data-tpl]').forEach(btn =>
@@ -2779,7 +2849,7 @@ const { canonical } = __M["state/normalize.js"];
 const { estimate1RM, exerciseVolume } = __M["lib/onerm.js"];
 const { lineChart, barChart } = __M["lib/chart.js"];
 const { buildCandidates, attachAutocomplete } = __M["lib/autocomplete.js"];
-const { BUILTIN_TEMPLATES } = __M["state/schema.js"];
+const { programExerciseNames } = __M["state/schema.js"];
 
 let _selCanonical = '';
 let _mode = 'top'; // 'top' | 'e1rm' | 'volume'
@@ -2911,8 +2981,7 @@ function render(container, router) {
   });
   const renameIn = container.querySelector('#renameIn');
   if (renameIn) {
-    const program = BUILTIN_TEMPLATES.flatMap(t => t.exercises.map(([name, , , kind]) => ({ name, kind })));
-    const cands = buildCandidates(sessions, program).filter(c => c.canonical !== _selCanonical);
+    const cands = buildCandidates(sessions, programExerciseNames()).filter(c => c.canonical !== _selCanonical);
     attachAutocomplete(renameIn, cands, () => {});
     const save = async () => {
       const newName = renameIn.value.trim();
@@ -3254,6 +3323,7 @@ __M["views/report.js"] = { render };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
+const { KEYS, BUILTIN_PROGRAMS } = __M["state/schema.js"];
 const { GistAdapter } = __M["sync/gist.js"];
 const { mountTimerBar } = __M["lib/timer.js"];
 const { toast, fmtDate } = __M["lib/dom.js"];
@@ -3347,6 +3417,8 @@ function updateSyncBadge() {
 /* ========== bootstrap ========== */
 
 function init() {
+  rememberProgramFromUrl();
+
   // Initialize store with optional seed for first-run
   store.init(SEED);
 
@@ -3406,6 +3478,19 @@ function init() {
   updateSyncBadge();
 
   registerServiceWorker();
+}
+
+/* ========== which built-in program this device shows ========== */
+function rememberProgramFromUrl() {
+  // Install link decides once: index.html?p=mirela → stored outside synced
+  // state (KEYS.PROGRAM), so it survives "Pobriši vse" and JSON import.
+  try {
+    const p = new URLSearchParams(location.search).get('p');
+    if (p && BUILTIN_PROGRAMS[p]) {
+      localStorage.setItem(KEYS.PROGRAM, p);
+      window.history.replaceState(null, '', location.pathname); // keep the URL clean
+    }
+  } catch (e) { /* storage or history unavailable — default program */ }
 }
 
 /* ========== offline: service worker ========== */
