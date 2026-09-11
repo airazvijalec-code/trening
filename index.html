@@ -475,6 +475,7 @@ const KEYS = {
   V2: 'trening_data_v2',     // current
   TOKEN: 'trening_gist_token', // separate from main blob (never synced)
   PROGRAM: 'trening_program',  // which built-in program this device shows (never synced)
+  BACKUP: 'trening_data_backup', // last known-good state (never synced; see Store._backup)
 };
 
 /** Generate a short stable id. */
@@ -850,8 +851,8 @@ const FULLBODY_MIRELA = [
 ];
 
 const BUILTIN_PROGRAMS = {
-  alen:   { title: '6-dnevni Push / Pull / Legs', templates: PPL_ALEN },
-  mirela: { title: 'Celo telo 3 + 1 (zadnjica)', templates: FULLBODY_MIRELA },
+  alen:   { label: 'Alen',   title: '6-dnevni Push / Pull / Legs', templates: PPL_ALEN },
+  mirela: { label: 'Mirela', title: 'Celo telo 3 + 1 (zadnjica)', templates: FULLBODY_MIRELA },
 };
 
 /** Program key for this device (set once from the install link). */
@@ -866,6 +867,7 @@ function currentProgramKey() {
 /** The active program's template list (what "Nov trening" shows). */
 function builtinTemplates() { return BUILTIN_PROGRAMS[currentProgramKey()].templates; }
 function builtinProgramTitle() { return BUILTIN_PROGRAMS[currentProgramKey()].title; }
+function builtinProgramLabel() { return BUILTIN_PROGRAMS[currentProgramKey()].label; }
 
 /** Names (with kind) of the active program, for autocomplete. */
 function programExerciseNames() {
@@ -882,7 +884,7 @@ function sessionFromTemplate(def) {
   return s;
 }
 
-__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_PROGRAMS, DEFAULT_PROGRAM, currentProgramKey, builtinTemplates, builtinProgramTitle, programExerciseNames, sessionFromTemplate, LEGACY_NAME_MAP, renameLegacyExercises };
+__M["state/schema.js"] = { SCHEMA_VERSION, KEYS, uid, emptyState, newSession, newExercise, newCardioExercise, newExerciseFromTemplate, newSet, newCardioSet, isCardio, setHasData, cardioKm, normalizeSession, migrate, loadOrMigrate, todayISO, BUILTIN_PROGRAMS, DEFAULT_PROGRAM, currentProgramKey, builtinTemplates, builtinProgramTitle, builtinProgramLabel, programExerciseNames, sessionFromTemplate, LEGACY_NAME_MAP, renameLegacyExercises };
 }
 /* state/store.js */
 {
@@ -901,6 +903,7 @@ class Store {
     this.syncStatus = 'off'; // 'off'|'ok'|'syncing'|'err'
     this._saveTimer = 0;
     this._syncTimer = 0;
+    this._lastWritten = 0; // updatedAt of the blob this instance last wrote/read
   }
 
   /** Load from localStorage (with migration) or seed if first run. */
@@ -908,7 +911,9 @@ class Store {
     const loaded = loadOrMigrate();
     if (loaded) {
       this.state = loaded;
-      // Persist v2 immediately after migration so we don't re-migrate next load.
+      this._lastWritten = loaded.updatedAt || 0;
+      this._backup(); // keep a known-good copy (never shrinks, see _backup)
+      // Persist immediately after migration so we don't re-migrate next load.
       this._persist();
     } else if (seed) {
       this.state = { ...emptyState(), ...seed, version: SCHEMA_VERSION };
@@ -919,6 +924,82 @@ class Store {
     this.state.bodyweight ||= [];
     this.state.templates ||= {};
     this.state.draft ||= null;
+  }
+
+  /* ---------------- multi-instance safety ----------------
+   * The same storage can be open in two places (home-screen icon + browser
+   * tab). Each used to write its whole in-memory state, so a stale instance
+   * could wipe what the other had just saved. Now: before writing, merge in
+   * anything newer that someone else stored; on return to foreground, re-read.
+   */
+  _readStored() {
+    try {
+      const raw = localStorage.getItem(KEYS.V2);
+      return raw ? migrate(JSON.parse(raw)) : null;
+    } catch (e) { return null; }
+  }
+
+  /** Fold in a newer blob written by another instance. Returns true if merged. */
+  _absorbNewer() {
+    const stored = this._readStored();
+    if (!stored || (stored.updatedAt || 0) <= this._lastWritten) return false;
+    const keepDraft = this.state.draft || stored.draft || null;
+    this.state = mergeStates(this.state, stored);
+    this.state.draft = keepDraft;
+    this._lastWritten = stored.updatedAt || 0;
+    return true;
+  }
+
+  /** Called when the app comes back to the foreground. */
+  refreshFromStorage() {
+    if (this._absorbNewer()) this._emit('data');
+  }
+
+  /* ---------------- backup ----------------
+   * KEYS.BACKUP holds the last known-good state. It is refreshed on every
+   * start and before destructive actions, but never replaced by a state with
+   * fewer sessions unless force=true — so a wiped/empty state cannot
+   * overwrite the copy you would want to restore.
+   */
+  _backup(force = false) {
+    try {
+      if (!force) {
+        const prev = this.backupInfo();
+        if (prev && prev.sessions > (this.state.sessions || []).length) return;
+      }
+      localStorage.setItem(KEYS.BACKUP, JSON.stringify({ savedAt: Date.now(), state: this.state }));
+    } catch (e) { console.warn('backup failed', e); }
+  }
+
+  /** { savedAt, sessions } or null. */
+  backupInfo() {
+    try {
+      const raw = localStorage.getItem(KEYS.BACKUP);
+      if (!raw) return null;
+      const b = JSON.parse(raw);
+      return { savedAt: b.savedAt || 0, sessions: (b.state?.sessions || []).length };
+    } catch (e) { return null; }
+  }
+
+  /** Replace current state with the backup (merged, so nothing newer is lost). */
+  restoreBackup() {
+    const raw = localStorage.getItem(KEYS.BACKUP);
+    if (!raw) throw new Error('Ni varnostne kopije');
+    const b = migrate(JSON.parse(raw).state);
+    b.sessions = (b.sessions || []).map(normalizeSession);
+    this.state = mergeStates(b, this.state);
+    this.state.draft = this.state.draft || b.draft || null;
+    this.state.updatedAt = Date.now();
+    this._persist();
+    this._scheduleSync();
+    this._emit('data');
+    return this.state.sessions.length;
+  }
+
+  /** Connect this device to an existing gist and pull its history. */
+  async connectGist(id) {
+    this.update(s => { s.settings.sync.gistId = id; });
+    return this.pullNow();
   }
 
   subscribe(fn) { this._subs.add(fn); return () => this._subs.delete(fn); }
@@ -940,8 +1021,10 @@ class Store {
 
   _persist() {
     try {
+      this._absorbNewer(); // never overwrite what another instance saved meanwhile
       const data = JSON.stringify(this.state);
       localStorage.setItem(KEYS.V2, data);
+      this._lastWritten = this.state.updatedAt || 0;
     } catch (e) {
       console.error('persist failed', e);
       if (e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22)) {
@@ -1022,6 +1105,7 @@ class Store {
   }
 
   replaceAll(next) {
+    this._backup(true); // whatever we are about to replace stays restorable
     // Imported files may be any older version — run the same migrations as on load.
     const migrated = migrate({ ...emptyState(), ...next });
     this.state = { ...emptyState(), ...migrated, version: SCHEMA_VERSION };
@@ -2410,6 +2494,7 @@ __M["views/active.js"] = { startNew, startFromTemplate, repeatFrom, render };
 const { store } = __M["state/store.js"];
 const { esc, fmtDate, SL } = __M["lib/dom.js"];
 const { buildPRIndex } = __M["lib/pr.js"];
+const { builtinProgramLabel } = __M["state/schema.js"];
 
 function render(container, router) {
   const data = store.state;
@@ -2418,7 +2503,8 @@ function render(container, router) {
 
   document.getElementById('title').textContent = 'Trening';
   document.getElementById('subtitle').textContent =
-    new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long' });
+    new Date().toLocaleDateString('sl-SI', { weekday: 'long', day: 'numeric', month: 'long' })
+    + ' · Program: ' + builtinProgramLabel();
 
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
   const wk = ss.filter(s => new Date(s.date) >= cutoff);
@@ -3014,8 +3100,8 @@ __M["views/progress.js"] = { render };
  * ===================================================================== */
 
 const { store } = __M["state/store.js"];
-const { KEYS, todayISO } = __M["state/schema.js"];
-const { esc, toast, confirm2, relTime } = __M["lib/dom.js"];
+const { KEYS, todayISO, builtinProgramLabel } = __M["state/schema.js"];
+const { esc, toast, confirm2, relTime, fmtDate } = __M["lib/dom.js"];
 
 let _sheet = null;
 
@@ -3068,10 +3154,20 @@ function rerender() {
         <button class="btn ghost sm" id="syncPull">⤓ Potegni</button>
         <button class="btn ghost sm" id="syncPush">⤒ Pošlji</button>
       </div>
+      ${token ? `
+      <div class="field" style="margin-top:14px">
+        <label>Poveži z obstoječim gistom (ID iz naslova gist.github.com/…/<b>ID</b>)</label>
+        <div class="row" style="gap:8px">
+          <input id="gistIn" type="text" autocomplete="off" spellcheck="false" placeholder="npr. 96486745c8d7…" style="flex:1;min-width:0">
+          <button class="btn ghost sm" id="gistConnect">Poveži</button>
+        </div>
+        <div class="set-help" style="margin-top:6px">Za nov telefon: zgodovina se potegne iz gista in združi s tukajšnjo.</div>
+      </div>` : ''}
     </div>
 
     <div class="set-section">
       <h3>Trening</h3>
+      <div class="kv"><span class="k">Program na tej napravi</span><span class="v">${esc(builtinProgramLabel())}</span></div>
       <div class="field">
         <label>Privzet počitek (sek)</label>
         <input type="number" id="restDef" value="${st.settings.restDefault || 90}" min="0" step="5">
@@ -3086,6 +3182,7 @@ function rerender() {
       <h3>Podatki</h3>
       <button class="menu-item" id="exp">⤓ Izvozi vse v JSON</button>
       <button class="menu-item" id="imp">⤒ Uvozi JSON (zamenja vse)</button>
+      ${(() => { const b = store.backupInfo(); return b ? `<button class="menu-item" id="restore">↶ Obnovi varnostno kopijo (${b.sessions} ${b.sessions === 1 ? 'trening' : 'treningov'} · ${relTime(b.savedAt)})</button>` : ''; })()}
       <button class="menu-item" id="rst" style="color:#ff7070">✕ Pobriši vse</button>
     </div>
 
@@ -3143,6 +3240,27 @@ function bind() {
     try {
       await store.pushNow();
       toast('Poslano');
+      rerender();
+    } catch (e) { toast('Napaka: ' + e.message, 'err'); }
+  };
+  const gistBtn = $('#gistConnect');
+  if (gistBtn) gistBtn.onclick = async () => {
+    const id = ($('#gistIn').value || '').trim().replace(/^.*\//, ''); // accepts full URL too
+    if (!/^[0-9a-f]{16,64}$/i.test(id)) { toast('To ni videti kot Gist ID', 'err'); return; }
+    if (!await confirm2(`Povežem to napravo z gistom ${id.slice(0, 8)}… in potegnem zgodovino?`)) return;
+    try {
+      await store.connectGist(id);
+      toast(`Povezano · ${store.state.sessions.length} treningov`);
+      rerender();
+    } catch (e) { toast('Napaka: ' + e.message, 'err'); }
+  };
+  const restoreBtn = $('#restore');
+  if (restoreBtn) restoreBtn.onclick = async () => {
+    const b = store.backupInfo();
+    if (!await confirm2(`Obnovim varnostno kopijo (${b.sessions} treningov)? Novejši treningi ostanejo.`)) return;
+    try {
+      const n = store.restoreBackup();
+      toast(`Obnovljeno · ${n} treningov`);
       rerender();
     } catch (e) { toast('Napaka: ' + e.message, 'err'); }
   };
@@ -3437,6 +3555,13 @@ function init() {
 
   // Mount the rest timer bar (always present, hidden when idle)
   mountTimerBar();
+
+  // Another copy of the app (icon vs. browser tab) may have saved meanwhile —
+  // re-read storage whenever this one comes back to the foreground.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') store.refreshFromStorage();
+  });
+  window.addEventListener('pageshow', e => { if (e.persisted) store.refreshFromStorage(); });
 
   // Tab nav
   document.querySelectorAll('nav.tab a').forEach(a =>

@@ -12,7 +12,7 @@ Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` 
 |---|---|
 | `state/normalize.js` | kanonična imena vaj (lowercase, brez šumnikov), Levenshtein fuzzy match |
 | `state/schema.js` | schema v4 (v4 = enkratna združitev starih imen vaj prek `LEGACY_NAME_MAP`), migracije, `uid()`, kardio helperji (`isCardio`, `setHasData`, `cardioKm`), vgrajeni programi `BUILTIN_PROGRAMS` (`alen` = 6-dnevni PPL, `mirela` = celo telo 3+1); aktivni program določi namestitvena povezava `index.html?p=<ključ>` (glej `main.js`) |
-| `state/store.js` | `Store` — edini vir resnice; autosave v localStorage (300 ms debounce); sync scheduling (2 s); `mergeStates` (last-write-wins po seji) |
+| `state/store.js` | `Store` — edini vir resnice; autosave v localStorage (300 ms debounce); sync scheduling (2 s); `mergeStates` (last-write-wins po seji); varovalke: pred vsakim zapisom združi novejše stanje druge odprte kopije (`_absorbNewer`), ob vrnitvi v ospredje `refreshFromStorage()`, varnostna kopija `KEYS.BACKUP` (`_backup` se nikoli ne skrči, `restoreBackup`), `connectGist(id)` |
 | `sync/gist.js` | backup v zaseben GitHub Gist (PAT s scope `gist`, datoteka `trening.json`) |
 | `lib/dom.js` | `esc`, `toast`, `confirm2`, `debounce`, datumi sl-SI |
 | `lib/onerm.js` | e1RM (Epley/Brzycki/Lombardi — mediana) |
@@ -24,7 +24,7 @@ Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` 
 
 ## Podatkovni model (v4)
 
-- localStorage: `trening_data_v2` (stanje; ime ključa ostaja, polje `version` je 4), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira), `trening_program` (ključ vgrajenega programa za to napravo — se NIKOLI ne sinhronizira, preživi "Pobriši vse").
+- localStorage: `trening_data_v2` (stanje; ime ključa ostaja, polje `version` je 4), `trening_gist_token` (PAT — se NIKOLI ne sinhronizira), `trening_program` (ključ vgrajenega programa za to napravo — se NIKOLI ne sinhronizira, preživi "Pobriši vse"), `trening_data_backup` (zadnje dobro stanje; osveži se ob zagonu in pred uvozom/brisanjem, nikoli z manj sejami, razen pred uvozom/brisanjem).
 - `state = { version, sessions[], templates{}, bodyweight[], draft, settings, updatedAt }`
 - `session = { id, date, type, durationMin, rpe, bodyweight, exercises[], comment, startedAt, createdAt, updatedAt }`
 - `exercise = { id, name, canonical, kind, note, targetReps, sets[] }`; `kind` je `'strength'` (privzeto, manjkajoč = strength) ali `'cardio'`
