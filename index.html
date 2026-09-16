@@ -1116,6 +1116,23 @@ class Store {
     return n;
   }
 
+  /** Import a JSON export: MERGE with what is on this device (sessions
+   *  union, newer wins; settings/templates from the file; draft kept).
+   *  Nothing logged on this device since the export is lost. */
+  importState(next) {
+    this._backup(true);
+    const file = migrate({ ...emptyState(), ...next });
+    file.sessions = (file.sessions || []).map(normalizeSession);
+    const local = this.state;
+    this.state = { ...mergeStates(file, local), version: SCHEMA_VERSION };
+    this.state.draft = local.draft || file.draft || null;
+    this.state.updatedAt = Date.now();
+    this._persist();
+    this._scheduleSync();
+    this._emit('data');
+    return this.state.sessions.length;
+  }
+
   replaceAll(next) {
     this._backup(true); // whatever we are about to replace stays restorable
     // Imported files may be any older version — run the same migrations as on load.
@@ -3193,7 +3210,7 @@ function rerender() {
     <div class="set-section">
       <h3>Podatki</h3>
       <button class="menu-item" id="exp">⤓ Izvozi vse v JSON</button>
-      <button class="menu-item" id="imp">⤒ Uvozi JSON (zamenja vse)</button>
+      <button class="menu-item" id="imp">⤒ Uvozi JSON (združi z obstoječim)</button>
       ${(() => { const b = store.backupInfo(); return b ? `<button class="menu-item" id="restore">↶ Obnovi varnostno kopijo (${b.sessions} ${b.sessions === 1 ? 'trening' : 'treningov'} · ${relTime(b.savedAt)})</button>` : ''; })()}
       <button class="menu-item" id="rst" style="color:#ff7070">✕ Pobriši vse</button>
     </div>
@@ -3593,8 +3610,8 @@ function init() {
       try {
         const j = JSON.parse(r.result);
         if (!j.sessions) throw new Error('Manjka "sessions"');
-        store.replaceAll(j);
-        toast('Uvoženo');
+        const n = store.importState(j);
+        toast(`Uvoženo · skupaj ${n} treningov`);
         router.go('home');
       } catch (err) { toast('Napaka pri uvozu: ' + err.message, 'err'); }
     };
