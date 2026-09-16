@@ -1004,6 +1004,7 @@ class Store {
     clearTimeout(this._syncTimer); // cancel any pending push of the pre-connect state
     this.update(s => { s.settings.sync.gistId = id; }, { skipSync: true });
     try {
+      await this.sync.inspectGist(id); // precise error (HTTP status) before anything else
       const remote = await this.pullNow();
       if (!remote) throw new Error('Gist ne obstaja ali ne vsebuje trening.json');
     } catch (e) {
@@ -1293,9 +1294,18 @@ class GistAdapter {
     return res.json();
   }
 
-  /** Verify token works (used by Settings "Test connection"). */
+  /** Verify token works (used by Settings "Test connection"). Returns { login }. */
   async testToken() {
-    return this._req('/user'); // returns user info on 200
+    const u = await this._req('/user'); // 200 → user info
+    return { login: u.login || '?' };
+  }
+
+  /** Does this gist exist and hold trening.json? Throws with the HTTP status if not. */
+  async inspectGist(id) {
+    const gist = await this._req('/gists/' + id);
+    const file = gist.files?.[FILENAME];
+    if (!file) throw new Error('Gist ' + id.slice(0, 8) + '… ne vsebuje ' + FILENAME);
+    return { owner: gist.owner?.login || '?', updated: gist.updated_at || '' };
   }
 
   /** Pull the trening.json file from the configured gist. */
@@ -3246,7 +3256,7 @@ function bind() {
   $('#tokTest').onclick = async () => {
     try {
       const u = await store.sync.testToken();
-      toast('OK — ' + (u.login || 'auth velja'));
+      toast('Token OK · račun: ' + u.login);
     } catch (e) {
       toast(e.message, 'err');
     }
