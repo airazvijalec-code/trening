@@ -996,10 +996,22 @@ class Store {
     return this.state.sessions.length;
   }
 
-  /** Connect this device to an existing gist and pull its history. */
+  /** Connect this device to an existing gist: PULL first, push only after
+   *  the remote history is merged in. Never let a fresh, empty device
+   *  overwrite an existing gist. */
   async connectGist(id) {
-    this.update(s => { s.settings.sync.gistId = id; });
-    return this.pullNow();
+    const prev = this.state.settings.sync.gistId || '';
+    clearTimeout(this._syncTimer); // cancel any pending push of the pre-connect state
+    this.update(s => { s.settings.sync.gistId = id; }, { skipSync: true });
+    try {
+      const remote = await this.pullNow();
+      if (!remote) throw new Error('Gist ne obstaja ali ne vsebuje trening.json');
+    } catch (e) {
+      this.update(s => { s.settings.sync.gistId = prev; }, { skipSync: true });
+      throw e;
+    }
+    this._scheduleSync(); // now safe: local state already contains the gist's history
+    return this.state.sessions.length;
   }
 
   subscribe(fn) { this._subs.add(fn); return () => this._subs.delete(fn); }
@@ -3249,8 +3261,8 @@ function bind() {
     if (!/^[0-9a-f]{16,64}$/i.test(id)) { toast('To ni videti kot Gist ID', 'err'); return; }
     if (!await confirm2(`Povežem to napravo z gistom ${id.slice(0, 8)}… in potegnem zgodovino?`)) return;
     try {
-      await store.connectGist(id);
-      toast(`Povezano · ${store.state.sessions.length} treningov`);
+      const n = await store.connectGist(id);
+      toast(`Povezano · ${n} treningov`);
       rerender();
     } catch (e) { toast('Napaka: ' + e.message, 'err'); }
   };
