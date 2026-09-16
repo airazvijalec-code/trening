@@ -16,8 +16,8 @@
  * prenesejo same prek osvežitve v ozadju.
  * ===================================================================== */
 
-const VERSION = 'trening-v2';
-const APP_SHELL = ['./', './index.html', './manifest.json',
+const VERSION = 'trening-v3';
+const APP_SHELL = ['./', './index.html', './manifest.json', './manifest-mirela.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png'];
 
 const NETWORK_ONLY_HOSTS = ['api.github.com', 'gist.githubusercontent.com'];
@@ -48,12 +48,8 @@ self.addEventListener('fetch', e => {
   if (NETWORK_ONLY_HOSTS.includes(url.hostname)) return; // brskalnik gre naravnost na mrežo
 
   if (url.origin === self.location.origin) {
-    // An install link (index.html?p=mirela) must run the NEWEST app so the
-    // parameter is understood → network first, cache only as offline fallback.
-    if (req.mode === 'navigate' && url.search) {
-      e.respondWith(networkFirst(req));
-      return;
-    }
+    // Navigations with ?p=<program> (the installed icon's start_url) are
+    // served like any other: cached app first, refresh in the background.
     e.respondWith(staleWhileRevalidate(req));
     return;
   }
@@ -80,20 +76,6 @@ async function staleWhileRevalidate(req) {
   const fresh = await refresh;
   return fresh || new Response('Offline — aplikacija še ni bila naložena.', {
     status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-}
-
-/** Navigations with a query string: fresh copy when online, cache when not. */
-async function networkFirst(req) {
-  const cache = await caches.open(VERSION);
-  try {
-    const res = await fetch(req);
-    if (res && res.ok) await cache.put('./index.html', res.clone());
-    return res;
-  } catch (e) {
-    return (await cache.match('./index.html'))
-      || new Response('Offline — aplikacija še ni bila naložena.', {
-        status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-  }
 }
 
 /** Fonts: cache hit wins; otherwise fetch and store (opaque responses too). */

@@ -2,7 +2,7 @@
 
 Mobile-first beležnik vadb za moč (PWA-stil, temna tema, UI v slovenščini).
 Cela aplikacija je **ena datoteka: `index.html`** (~3200 vrstic) — vanilla JS, brez frameworkov, brez odvisnosti, brez build sistema. To je zavestna odločitev, ne pomanjkljivost.
-Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` (service worker), `manifest.json` in `icons/` (PNG ikone, generirane iz favicon SVG-ja).
+Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` (service worker), `manifest.json` (privzeti program) + `manifest-<ključ>.json` za vsak drug program (njegov `start_url` nosi `?p=<ključ>`, da ikona program ponovno uveljavi ob vsakem zagonu) in `icons/` (PNG ikone, generirane iz favicon SVG-ja).
 
 ## Arhitektura
 
@@ -19,8 +19,8 @@ Poleg nje so v korenu samo datoteke, ki jih PWA nujno rabi kot ločene: `sw.js` 
 | `lib/chart.js` | inline SVG line/bar grafi (500×200) |
 | `lib/autocomplete.js`, `lib/pr.js`, `lib/timer.js` | predlogi imen vaj, PR detekcija, rest timer |
 | `views/*` | home, new, active (editor seje), history, detail, progress, report, settings, pr_flash |
-| `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()`, registracija SW, `?p=` → KEYS.PROGRAM |
-| `sw.js` (ločena datoteka) | offline: aplikacija cache-first + osvežitev v ozadju, GitHub API samo mreža, Google Fonts cache-first; cache `trening-v1` — `VERSION` dvigni, ko spremeniš `APP_SHELL` |
+| `main.js` | router (in-memory, brez URL), draft banner, sync badge, `init()`, registracija SW, `?p=` → KEYS.PROGRAM + izbira `manifest-<ključ>.json` |
+| `sw.js` (ločena datoteka) | offline: aplikacija cache-first + osvežitev v ozadju, GitHub API samo mreža, Google Fonts cache-first; cache `trening-vN` — `VERSION` dvigni, ko spremeniš `APP_SHELL` |
 
 ## Podatkovni model (v4)
 
